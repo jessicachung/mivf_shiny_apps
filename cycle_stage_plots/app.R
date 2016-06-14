@@ -45,7 +45,7 @@ for (p in probes_of_interest) {
 
 # Remove samples with cycle_stage 8,9,10
 phenotype_df <- phenotype_df %>% 
-  filter(cycle_stage %in% 1:7) %>%
+  # filter(cycle_stage %in% 1:7) %>%
   mutate(cycle_stage=factor(cycle_stage))
 combat_exprs <- combat_exprs[,phenotype_df[,"sample_id"]]
 
