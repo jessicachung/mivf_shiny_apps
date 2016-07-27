@@ -5,7 +5,6 @@
 # Plot expression a given probe along cycle days
 
 ## TODO: 
-## Repeat cycle stages at ends for cyclic nature
 ## Test other models
 ## Change plots to reactive
 
@@ -37,6 +36,15 @@ ILMN_3238259
 ILMN_3272768
 ILMN_1734552
 ILMN_1652431
+ILMN_1696183
+ILMN_1743290
+ILMN_1786015
+ILMN_1807529
+ILMN_2091454
+ILMN_2169736
+ILMN_2367126
+ILMN_1740706
+ILMN_2060719
 ILMN_1784217
 ILMN_1729033
 ILMN_1782743"
@@ -53,23 +61,39 @@ combat_exprs <- combat_exprs[,phenotype[,"sample_id"]]
 cycle <- phenotype[,"day_cycle"]
 
 expression_cycle <- function(exprs, pheno, probe, loess_span=0.75, jitter_scale=1, 
-                             band_size=2, color_str="endo", point_size=1, title="") {
+                             band_size=2, color_str="endo", point_size=1, title="",
+                             cycle_data=TRUE) {
   # Melt data
   dat <- exprs[probe,,drop=FALSE] %>% melt %>% 
     S4Vectors::rename(Var2="sample_id")
   stopifnot(dat[,"sample_id"] == pheno[,"sample_id"])
   dat <- cbind(dat, pheno %>% select(-sample_id))
-  
-  # Fit loess model
-  fit <- loess(value ~ day_cycle, dat, span=loess_span, model=TRUE)
-  cycle_range <- seq(min(cycle), max(cycle), by=0.5)
-  predict <- predict(fit, cycle_range)
   sd <- sd(dat[,"value"])
+  
+  if (cycle_data) {
+    # Repeat data for cyclic nature
+    cyclic_dat <- rbind(mutate(dat, day_cycle=day_cycle - 28),
+                        dat,
+                        mutate(dat, day_cycle=day_cycle + 28))
+    
+    # Fit loess model
+    fit <- loess(value ~ day_cycle, cyclic_dat, span=loess_span, model=TRUE)
+    cycle_range <- seq(0,28,by=0.5)
+  } else {
+    # Fit loess model
+    fit <- loess(value ~ day_cycle, dat, span=loess_span, model=TRUE)
+    cycle_range <- seq(min(cycle),max(cycle),by=0.5)
+  }
+  
+  # Get curve of loess model
+  predict <- predict(fit, cycle_range)
   curve <- data.frame(day_cycle=cycle_range, loess=predict, 
                       ymin=predict-band_size*sd, ymax=predict+band_size*sd)
   
   # Get outliers
-  indices <- which(abs(fit$residuals) - band_size * sd > 0)
+  residuals <- fit$residuals[between(fit$x, 0.1, 28)]
+  names(residuals) <- dat[,"sample_id"]
+  indices <- which(abs(residuals) - band_size * sd > 0)
   outliers <- pheno[indices,] %>% arrange(day_cycle) %>% dplyr::select(-text)
   
   # Jitter
@@ -127,10 +151,10 @@ ui <- fluidPage(
         condition="input.advanced == true",
         sliderInput("loess_span",
                     label = "LOESS alpha (smoothing):",
-                    min=0.4,
+                    min=0.2,
                     max=2,
                     step=0.05,
-                    value=0.75)
+                    value=0.4)
       ),
       
       # Curve band size
@@ -155,6 +179,14 @@ ui <- fluidPage(
                     value=0.5)
       ),
       
+      # Cycle data or not
+      conditionalPanel(
+        condition="input.advanced == true",
+        checkboxInput("cycle_data",
+                      label = "Loop 28 day data",
+                      value=TRUE)
+      ),
+      
       # Choose input type
       radioButtons("input_type",
                    label = h4("Input type:"),
@@ -165,7 +197,7 @@ ui <- fluidPage(
       # Toggle input type for drop down menu
       conditionalPanel(
         condition="input.input_type == 1",
-        radioButtons("probe_select", 
+        selectInput("probe_select", 
                     label = h4("Illumina probe ID"), 
                     choices = probe_list,
                     selected = probe_list[[1]])
@@ -250,6 +282,7 @@ server <- function(input, output){
     expression_cycle(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
                      loess_span=input$loess_span, jitter_scale=input$jitter_scale,
                      band_size=input$band_size, color_str=input$point_color,
+                     cycle_data=input$cycle_data,
                      title=rv$probe_name)
   })
   
@@ -257,7 +290,7 @@ server <- function(input, output){
     expression_cycle(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
                      loess_span=input$loess_span, jitter_scale=input$jitter_scale,
                      band_size=input$band_size, color_str=input$point_color, 
-                     point_size=0.5,
+                     point_size=0.5, cycle_data=input$cycle_data,
                      title=rv$probe_name)$plot
   })
   
@@ -266,7 +299,7 @@ server <- function(input, output){
     expression_cycle(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
                      loess_span=input$loess_span, jitter_scale=input$jitter_scale,
                      band_size=input$band_size, color_str=input$point_color, 
-                     point_size=0.5,
+                     point_size=0.5, cycle_data=input$cycle_data,
                      title=rv$probe_name)$outliers %>% dplyr::select(-afs_score_log)
   })
   
