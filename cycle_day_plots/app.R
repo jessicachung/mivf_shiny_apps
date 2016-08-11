@@ -21,7 +21,7 @@ library(stats)
 
 # setwd("~/Work/2016_mivf/shiny_apps/cycle_day_plots")
 load("data/combat_exprs.rda")
-phenotype <- read.table("data/combat_phenotype_with_day_cycle.tsv", header=TRUE, sep="\t", 
+phenotype <- read.table("data/cycle_phenotype_2016-08-11.tsv", header=TRUE, sep="\t", 
                            stringsAsFactors=FALSE) %>%
   mutate(endo=factor(endo),
          afs_score_log=log2(afs_score+0.01))
