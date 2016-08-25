@@ -4,9 +4,6 @@
 
 # Plot expression a given probe along cycle days with LOESS smoothing
 
-## TODO: 
-## R^2 function
-
 library(shiny)
 library(ggplot2)
 library(dplyr)
@@ -91,24 +88,37 @@ extend_days_data <- function(dat, extend_days) {
   }
 }
 
-get_outlier_samples <- function(fit, dat, pheno, sd, band_size) {
-  # Get outliers
-  residuals <- fit$residuals[between(fit$x, 0.1, 28)]
-  names(residuals) <- dat[,"sample_id"]
-  indices <- which(abs(residuals) - band_size * sd > 0)
-  outliers <- pheno[indices,] %>% arrange(day_cycle) %>% 
-    dplyr::select(-text, -afs_score_log)
-  return(outliers)
+get_residuals <- function(fit, dat) {
+  # Get vector of residuals for original data with sample IDs as names
+  x <- fit$residuals
+  df <- mutate(dat, residuals=x) %>% filter(original)
+  residuals <- df %>% .$residuals
+  names(residuals) <- df %>% .$sample_id
+  return(residuals)
 }
 
-calculate_R2 <- function() {
-  #TODO
-  return("NA")
+get_outlier_samples <- function(residuals, pheno, sd, band_size) {
+  # Get data frame of outlier samples
+  stopifnot(pheno[,"sample_id"] == names(residuals))
+  df <- pheno %>% mutate(residuals=residuals) %>%
+    filter(abs(residuals) - band_size * sd > 0) %>% 
+    arrange(day_cycle) %>% 
+    dplyr::select(-text, -afs_score_log)
+  return(df)
+}
+
+calculate_R2 <- function(residuals, dat) {
+  # Calculate R^2
+  SSR <- residuals^2 %>% sum
+  SST <- (dat$value - mean(dat$value))^2 %>% sum
+  R2 <- round(1 - SSR/SST, digits=3)
+  return(R2)
 }
 
 fit_loess_model <- function(exprs, pheno, probe, extend_days, loess_span=0.6, 
                             jitter_scale=1, band_size=2, color_str="endo", 
                             point_size=1) {
+  # Check if probe is valid
   if (! probe %in% rownames(exprs)) return(NULL)
   
   # Get data into a tidy data frame
@@ -127,12 +137,15 @@ fit_loess_model <- function(exprs, pheno, probe, extend_days, loess_span=0.6,
   # Prediction at each day in cycle
   predict <- predict(fit, cycle_range)
   
+  # Get residuals
+  residuals <- get_residuals(fit, dat=extended_dat)
+  
   # Calculate R^2
   sd <- sd(original_dat[,"value"])
-  R2 <- calculate_R2()
+  R2 <- calculate_R2(residuals=residuals, dat=original_dat)
   
   # Get outlier samples
-  outliers <- get_outlier_samples(fit, dat=original_dat, pheno=pheno, sd=sd, 
+  outliers <- get_outlier_samples(residuals=residuals, pheno=pheno, sd=sd,
                                   band_size=band_size)
   
   # Jitter
