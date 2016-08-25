@@ -337,7 +337,8 @@ server <- function(input, output){
       # Probe from text box
       rv$probe_name <- input$probe_text
     } else {
-      # Random probe
+      # Random probe (overwrite seed from jitter)
+      set.seed(Sys.time() %>% as.numeric)
       rv$probe_name <- sample(probes, 1)
     }
   })
