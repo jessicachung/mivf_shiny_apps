@@ -2,11 +2,11 @@
 ## Expression along 28 day cycle
 ############################################################
 
-# Plot expression a given probe along cycle days
+# Plot expression a given probe along cycle days with LOESS smoothing
 
 ## TODO: 
-## Test other models
-## Change plots to reactive
+## Add random button
+## R^2 function
 
 library(shiny)
 library(ggplot2)
@@ -15,19 +15,27 @@ library(stringr)
 library(reshape2)
 library(plotly)
 library(stats)
-#library(splines) # splines
-#library(MASS)    # lm.ridge
-#library(glmnet)  # lasso (alpha=1), ridge (alpha=0)
 
 # setwd("~/Work/2016_mivf/shiny_apps/cycle_day_plots")
+
+# Expression data
 load("data/combat_exprs.rda")
+
+# Phenotype info
 phenotype <- read.table("data/cycle_phenotype_2016-08-11.tsv", header=TRUE, sep="\t", 
-                           stringsAsFactors=FALSE) %>%
-  mutate(endo=factor(endo),
-         afs_score_log=log2(afs_score+0.01))
+                        stringsAsFactors=FALSE) %>%
+  mutate(endo=factor(endo), afs_score_log=log2(afs_score+0.01))
+
+# Probe info
 probe_df <- read.table("data/illumina_v4_annotation_with_detection.tsv", header=TRUE, sep="\t", 
                        stringsAsFactors=FALSE) %>% 
-  S4Vectors::rename(X10.="10%", X50.="50%", X90.="90%")
+  S4Vectors::rename(X10.="10%", X50.="50%", X90.="90%") %>%
+  dplyr::select(IlluminaID, SymbolReannotated, GenomicLocation, ProbeQuality, MeanDetectionPVal:`90%`) %>%
+  S4Vectors::rename(SymbolReannotated="Symbol")
+
+# Subset expression data
+combat_exprs <- combat_exprs[,phenotype[,"sample_id"]]
+cycle <- phenotype[,"day_cycle"]
 
 # Probes of interest from Jane
 probes_raw <- "ILMN_1764096
@@ -56,60 +64,94 @@ for (p in probes_of_interest) {
   probe_list[[p]] <- p
 }
 
-combat_exprs <- combat_exprs[,phenotype[,"sample_id"]]
+############################################################
+## Functions
 
-cycle <- phenotype[,"day_cycle"]
-
-expression_cycle <- function(exprs, pheno, probe, loess_span=0.75, jitter_scale=1, 
-                             band_size=2, color_str="endo", point_size=1, title="",
-                             cycle_data=TRUE) {
+get_tidy_cycle_data <- function(exprs, pheno, probe) {
   # Melt data
   dat <- exprs[probe,,drop=FALSE] %>% melt %>% 
     S4Vectors::rename(Var2="sample_id")
   stopifnot(dat[,"sample_id"] == pheno[,"sample_id"])
-  dat <- cbind(dat, pheno %>% select(-sample_id))
-  sd <- sd(dat[,"value"])
-  
-  if (cycle_data) {
-    # Repeat data for cyclic nature
-    cyclic_dat <- rbind(mutate(dat, day_cycle=day_cycle - 28),
-                        dat,
-                        mutate(dat, day_cycle=day_cycle + 28))
-    
-    # Fit loess model
-    fit <- loess(value ~ day_cycle, cyclic_dat, span=loess_span, model=TRUE)
-    cycle_range <- seq(0,28,by=0.5)
+  original_dat <- cbind(dat, pheno %>% dplyr::select(-sample_id)) %>% 
+    filter(!is.na(day_cycle)) %>% mutate(original=TRUE)
+  return(original_dat)
+}
+
+extend_days_data <- function(dat, extend_days) {
+  # Extend days backwards and forwards
+  if (extend_days > 0 && extend_days <= 28) {
+    forwards <- dat %>% filter(day_cycle < extend_days) %>% 
+      mutate(day_cycle=day_cycle + 28, original=FALSE)
+    backwards <- dat %>% filter(28 - day_cycle < extend_days) %>% 
+      mutate(day_cycle=day_cycle - 28, original=FALSE)
+    extended_dat <- rbind(backwards, dat, forwards)
+    return(extended_dat)
   } else {
-    # Fit loess model
-    fit <- loess(value ~ day_cycle, dat, span=loess_span, model=TRUE)
-    cycle_range <- seq(min(cycle),max(cycle),by=0.5)
+    stop("extend_days must be between 0 and 28")
   }
-  
-  # Get curve of loess model
-  predict <- predict(fit, cycle_range)
-  curve <- data.frame(day_cycle=cycle_range, loess=predict, 
-                      ymin=predict-band_size*sd, ymax=predict+band_size*sd)
-  
+}
+
+get_outlier_samples <- function(fit, dat, pheno, sd, band_size) {
   # Get outliers
   residuals <- fit$residuals[between(fit$x, 0.1, 28)]
   names(residuals) <- dat[,"sample_id"]
   indices <- which(abs(residuals) - band_size * sd > 0)
-  outliers <- pheno[indices,] %>% arrange(day_cycle) %>% dplyr::select(-text)
+  outliers <- pheno[indices,] %>% arrange(day_cycle) %>% 
+    dplyr::select(-text, -afs_score_log)
+  return(outliers)
+}
+
+calculate_R2 <- function() {
+  #TODO
+  return("NA")
+}
+
+fit_loess_model <- function(exprs, pheno, probe, extend_days, loess_span=0.6, 
+                            jitter_scale=1, band_size=2, color_str="endo", 
+                            point_size=1) {
+  if (! probe %in% rownames(exprs)) return(NULL)
+  
+  # Get data into a tidy data frame
+  original_dat <- get_tidy_cycle_data(exprs, pheno, probe)
+  if (extend_days) {
+    extended_dat <- extend_days_data(original_dat, extend_days)
+    cycle_range <- seq(0,28,by=0.5)
+  } else {
+    extended_dat <- original_dat
+    cycle_range <- seq(min(cycle),max(cycle),by=0.5)
+  }
+  
+  # Fit loess model
+  fit <- loess(value ~ day_cycle, extended_dat, span=loess_span, model=TRUE)
+  
+  # Prediction at each day in cycle
+  predict <- predict(fit, cycle_range)
+  
+  # Calculate R^2
+  sd <- sd(original_dat[,"value"])
+  R2 <- calculate_R2()
+  
+  # Get outlier samples
+  outliers <- get_outlier_samples(fit, dat=original_dat, pheno=pheno, sd=sd, 
+                                  band_size=band_size)
   
   # Jitter
   if (jitter_scale > 0) {
     set.seed(0)
-    jitter <- runif(nrow(dat),jitter_scale * -1,jitter_scale)
-    dat <- mutate(dat, day_cycle=day_cycle+jitter)
+    jitter <- runif(nrow(original_dat),jitter_scale * -1,jitter_scale)
+    original_dat <- mutate(original_dat, day_cycle=day_cycle+jitter)
   }
   
-  g <- ggplot(dat, aes(x=day_cycle, y=value)) +
+  predict <- data.frame(day_cycle=cycle_range, predict=predict, 
+                        ymin=predict-band_size*sd, ymax=predict+band_size*sd)
+  title <- paste0(probe, " (R^2 = ", R2, ")")
+  g <- ggplot(original_dat, aes(x=day_cycle, y=value)) +
     geom_point(aes_string(text="text", color=color_str), size=point_size) + 
-    geom_line(data=curve, aes(x=day_cycle, y=loess), alpha=0.3, size=1.5) +
-    geom_ribbon(data=curve, aes(x=day_cycle, y=loess, ymin=ymin, ymax=ymax), alpha=0.1) +
+    geom_line(data=predict, aes(x=day_cycle, y=predict), alpha=0.3, size=1.5) +
+    geom_ribbon(data=predict, aes(x=day_cycle, y=predict, ymin=ymin, ymax=ymax), alpha=0.1) +
     labs(title=title)
   
-  return(list(plot=g, outliers=outliers, cycle_means=NA))
+  return(list(plot=g, outliers=outliers, R2=R2))
 }
 
 
@@ -179,12 +221,15 @@ ui <- fluidPage(
                     value=0.5)
       ),
       
-      # Cycle data or not
+      # Extend days
       conditionalPanel(
         condition="input.advanced == true",
-        checkboxInput("cycle_data",
-                      label = "Loop 28 day data",
-                      value=TRUE)
+        sliderInput("extend_days",
+                    label="Extend days forward and backwards:",
+                    min=0,
+                    max=28,
+                    step=0.5,
+                    value=10)
       ),
       
       # Choose input type
@@ -251,7 +296,7 @@ ui <- fluidPage(
   # Given gene name, search for probes
   textInput("gene_search", 
             label = h4("Enter a gene name to search for probes:"), 
-            value = "e.g. VEZT"),
+            value = "VEZT"),
   
   # Probe search table
   tableOutput("gene_search_table")
@@ -265,7 +310,8 @@ server <- function(input, output){
   
   # Set reactive values
   rv <- reactiveValues(
-    probe_name = probe_list[[1]]
+    probe_name = probe_list[[1]],
+    model = NA
   )
   
   # Update probe name when submit button is pressed
@@ -277,44 +323,46 @@ server <- function(input, output){
     }
   })
   
+  # Update model when arguments update
+  observeEvent({rv$probe_name; input$plot_type; input$loess_span; 
+    input$jitter_scale; input$band_size; input$point_color; input$extend_days}, {
+      if (input$plot_type == "1") {
+        rv$model <- fit_loess_model(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
+                                    loess_span=input$loess_span, jitter_scale=input$jitter_scale,
+                                    band_size=input$band_size, color_str=input$point_color,
+                                    point_size=1, extend_days=input$extend_days)
+      } else {
+        # Use smaller point_size with plotly output
+        rv$model <- fit_loess_model(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
+                                    loess_span=input$loess_span, jitter_scale=input$jitter_scale,
+                                    band_size=input$band_size, color_str=input$point_color,
+                                    point_size=0.5, extend_days=input$extend_days)
+      }
+    })
+  
   output$ggplot <- renderPlot({
-    print(rv$probe_name)
-    expression_cycle(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
-                     loess_span=input$loess_span, jitter_scale=input$jitter_scale,
-                     band_size=input$band_size, color_str=input$point_color,
-                     cycle_data=input$cycle_data,
-                     title=rv$probe_name)
+    message("ggplot: ", rv$probe_name)
+    rv$model$plot
   })
   
   output$plotly <- renderPlotly({
-    expression_cycle(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
-                     loess_span=input$loess_span, jitter_scale=input$jitter_scale,
-                     band_size=input$band_size, color_str=input$point_color, 
-                     point_size=0.5, cycle_data=input$cycle_data,
-                     title=rv$probe_name)$plot
+    message("plotly: ", rv$probe_name)
+    rv$model$plot
   })
   
+  # Sample outliers table
   output$outlier_samples <- renderTable({
-    ### WIP, change to reactive
-    expression_cycle(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
-                     loess_span=input$loess_span, jitter_scale=input$jitter_scale,
-                     band_size=input$band_size, color_str=input$point_color, 
-                     point_size=0.5, cycle_data=input$cycle_data,
-                     title=rv$probe_name)$outliers %>% dplyr::select(-afs_score_log)
+    rv$model$outliers
   })
   
   # Probe info table
   output$probe_info <- renderTable({
-    probe_df %>% filter(IlluminaID == rv$probe_name) %>%
-      dplyr::select(IlluminaID, SymbolReannotated, GenomicLocation, ProbeQuality, MeanDetectionPVal:`90%`) %>%
-      S4Vectors::rename(SymbolReannotated="Symbol")
+    probe_df %>% filter(IlluminaID == rv$probe_name)
   })
   
   # Search table
   output$gene_search_table <- renderTable({
-    probe_df %>% filter(SymbolReannotated == input$gene_search) %>%
-      dplyr::select(IlluminaID, SymbolReannotated, GenomicLocation, ProbeQuality, MeanDetectionPVal:`90%`) %>%
-      S4Vectors::rename(SymbolReannotated="Symbol")
+    probe_df %>% filter(Symbol == input$gene_search)
   })
   
 }
