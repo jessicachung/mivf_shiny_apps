@@ -5,7 +5,6 @@
 # Plot expression a given probe along cycle days with LOESS smoothing
 
 ## TODO: 
-## Add random button
 ## R^2 function
 
 library(shiny)
@@ -36,6 +35,7 @@ probe_df <- read.table("data/illumina_v4_annotation_with_detection.tsv", header=
 # Subset expression data
 combat_exprs <- combat_exprs[,phenotype[,"sample_id"]]
 cycle <- phenotype[,"day_cycle"]
+probes <- rownames(combat_exprs)
 
 # Probes of interest from Jane
 probes_raw <- "ILMN_1764096
@@ -236,7 +236,8 @@ ui <- fluidPage(
       radioButtons("input_type",
                    label = h4("Input type:"),
                    choices = list("Probe ID from list" = 1,
-                                  "Enter probe ID" = 2),
+                                  "Enter probe ID" = 2,
+                                  "Random probe" = 3),
                    selected = 2),
       
       # Toggle input type for drop down menu
@@ -317,9 +318,14 @@ server <- function(input, output){
   # Update probe name when submit button is pressed
   observeEvent({input$submit; input$probe_select}, {
     if (input$input_type == "1") {
+      # Probe from list
       rv$probe_name <- input$probe_select
-    } else {
+    } else if (input$input_type == "2") {
+      # Probe from text box
       rv$probe_name <- input$probe_text
+    } else {
+      # Random probe
+      rv$probe_name <- sample(probes, 1)
     }
   })
   
