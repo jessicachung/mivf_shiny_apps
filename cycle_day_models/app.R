@@ -119,7 +119,7 @@ calculate_R2 <- function(residuals, dat) {
 }
 
 expression_plot <- function(dat, predict, band_size, sd, jitter_scale, 
-                            color_str, point_size, probe, R2) {
+                            color_str, point_size, probe, R2, cycle_range) {
   # Plot expression and curve with ggplot
   if (jitter_scale > 0) {
     set.seed(0)
@@ -179,7 +179,8 @@ fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
   # Plot
   g <- expression_plot(dat=original_dat, predict=predict, band_size=band_size,
                        sd=sd, jitter_scale=jitter_scale, color_str=color_str, 
-                       point_size=point_size, probe=probe, R2=R2)
+                       point_size=point_size, probe=probe, R2=R2, 
+                       cycle_range=cycle_range)
   
   return(list(plot=g, outliers=outliers, coef=coef, R2=R2))
 }
@@ -227,7 +228,8 @@ fit_en_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degre
   # Plot
   g <- expression_plot(dat=original_dat, predict=predict, band_size=band_size,
                        sd=sd, jitter_scale=jitter_scale, color_str=color_str, 
-                       point_size=point_size, probe=probe, R2=R2)
+                       point_size=point_size, probe=probe, R2=R2,
+                       cycle_range=cycle_range)
   
   return(list(plot=g, outliers=outliers, coef=coef, R2=R2))
 }
@@ -273,7 +275,8 @@ fit_spline_model <- function(exprs, pheno, probe, extend_days, spline_df,
   # Plot
   g <- expression_plot(dat=original_dat, predict=predict, band_size=band_size,
                        sd=sd, jitter_scale=jitter_scale, color_str=color_str, 
-                       point_size=point_size, probe=probe, R2=R2)
+                       point_size=point_size, probe=probe, R2=R2,
+                       cycle_range=cycle_range)
   
   return(list(plot=g, outliers=outliers, coef=coef, R2=R2))
 }
