@@ -178,8 +178,6 @@ fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
   return(list(plot=g, outliers=outliers, coef=coef, R2=R2))
 }
 
-
-
 fit_en_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
     poly_raw, elastic_alpha, cycle_range=seq(0,28,by=0.5), jitter_scale=1, 
     band_size=2, color_str="endo", point_size=1) {
@@ -229,6 +227,52 @@ fit_en_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degre
   return(list(plot=g, outliers=outliers, coef=coef, R2=R2))
 }
 
+
+fit_spline_model <- function(exprs, pheno, probe, extend_days, spline_df,
+    cycle_range=seq(0,28,by=0.5), jitter_scale=1, band_size=2, color_str="endo", 
+    point_size=1) {
+  # Check if probe is valid
+  if (! probe %in% rownames(exprs)) return(NULL)
+  
+  # Get data into a tidy data frame
+  original_dat <- get_tidy_cycle_data(exprs, pheno, probe)
+  if (extend_days) {
+    extended_dat <- extend_days_data(original_dat, extend_days)
+  } else {
+    extended_dat <- original_dat
+  }
+  
+  # Fit model
+  fit <- lm(value ~ ns(day_cycle, df=spline_df), data=extended_dat)
+  
+  # Prediction at each day in cycle
+  pred <- data.frame(day_cycle=cycle_range)
+  predict <- predict(fit, pred)
+  
+  # Get coefficients
+  coef <- fit$coefficients %>% t %>% as.data.frame %>% format(digits=2)
+  colnames(coef) <- colnames(coef) %>% str_replace("ns([^0-9]+)", "x")
+  
+  # Get residuals
+  residuals <- fit$residuals[which(extended_dat$original)]
+  names(residuals) <- extended_dat %>% filter(original) %>% .$sample_id
+  
+  # Calculate R^2
+  sd <- sd(original_dat$value)
+  R2 <- calculate_R2(residuals=residuals, dat=original_dat)
+  
+  # Get outlier samples
+  outliers <- get_outlier_samples(residuals=residuals, pheno=pheno, sd=sd,
+                                  band_size=band_size)
+  
+  # Plot
+  g <- expression_plot(dat=original_dat, predict=predict, band_size=band_size,
+                       sd=sd, jitter_scale=jitter_scale, color_str=color_str, 
+                       point_size=point_size, probe=probe, R2=R2)
+  
+  return(list(plot=g, outliers=outliers, coef=coef, R2=R2))
+}
+
 ############################################################
 ## UI
 
@@ -245,6 +289,7 @@ ui <- fluidPage(
                                   "Interactive (plotly)" = 2),
                    selected = 1),
       
+      hr(),
       
       # Type of model to fit
       radioButtons("model_type",
@@ -285,6 +330,17 @@ ui <- fluidPage(
         checkboxInput("poly_raw",
                       label = "Raw polynomials (not orthogonal)",
                       value=TRUE)
+      ),
+      
+      # Spline parameters
+      conditionalPanel(
+        condition="input.model_type == 3",
+        sliderInput("spline_df",
+                    label = "Spline df:",
+                    min=1,
+                    max=20,
+                    step=1,
+                    value=6)
       ),
       
       # Advanced options
@@ -442,8 +498,8 @@ server <- function(input, output){
   
   # Update model when arguments update
   observeEvent({rv$probe_name; input$plot_type; input$model_type; input$poly_degree; 
-    input$poly_raw; input$elastic_alpha; input$jitter_scale; input$band_size; 
-    input$point_color; input$extend_days}, {
+    input$poly_raw; input$elastic_alpha; input$spline_df; input$jitter_scale; 
+    input$band_size; input$point_color; input$extend_days}, {
       # Set point size smaller if plotting with Plotly
       if (input$plot_type == "1") {
         ps <- 1
@@ -461,6 +517,12 @@ server <- function(input, output){
         rv$model <- fit_en_polynomial_model(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
                         extend_days=input$extend_days, poly_degree=input$poly_degree,
                         poly_raw=input$poly_raw, elastic_alpha=input$elastic_alpha,
+                        jitter_scale=input$jitter_scale, band_size=input$band_size, 
+                        color_str=input$point_color, point_size=ps)
+      } else {
+        # Splines
+        rv$model <- fit_spline_model(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
+                        extend_days=input$extend_days, spline_df=input$spline_df,
                         jitter_scale=input$jitter_scale, band_size=input$band_size, 
                         color_str=input$point_color, point_size=ps)
       }
