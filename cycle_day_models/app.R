@@ -413,7 +413,7 @@ ui <- fluidPage(
       
     )),
     
-    column(8, wellPanel(
+    column(7, wellPanel(
       fluidRow(
         column(6,
           # Choose input type
@@ -425,7 +425,7 @@ ui <- fluidPage(
                        selected = 3)
         ),
         
-        column(6,
+        column(5,
           # Toggle input type for drop down menu
           conditionalPanel(
             condition="input.input_type == 1",
