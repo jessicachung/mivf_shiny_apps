@@ -113,6 +113,26 @@ calculate_R2 <- function(residuals, dat) {
   return(R2)
 }
 
+expression_plot <- function(dat, predict, band_size, sd, jitter_scale, 
+                            color_str, point_size, probe, R2) {
+  # Plot expression and curve with ggplot
+  if (jitter_scale > 0) {
+    set.seed(0)
+    # Add jitter to avoid overplotting
+    jitter <- runif(nrow(dat),jitter_scale * -1,jitter_scale)
+    dat <- mutate(dat, day_cycle=day_cycle+jitter)
+  }
+  predict <- data.frame(day_cycle=cycle_range, predict=predict, 
+                        ymin=predict-band_size*sd, ymax=predict+band_size*sd)
+  title <- paste0(probe, " (R^2 = ", R2, ")")
+  g <- ggplot(dat, aes(x=day_cycle, y=value)) +
+    geom_point(aes_string(text="text", color=color_str), size=point_size) + 
+    geom_line(data=predict, aes(x=day_cycle, y=predict), alpha=0.3, size=1.5) +
+    geom_ribbon(data=predict, aes(x=day_cycle, y=predict, ymin=ymin, ymax=ymax), alpha=0.1) +
+    labs(title=title)
+  return(g)
+}
+
 fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
     poly_raw, cycle_range=seq(0,28,by=0.5), jitter_scale=1, band_size=2, 
     color_str="endo", point_size=1) {
@@ -150,21 +170,10 @@ fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
   outliers <- get_outlier_samples(residuals=residuals, pheno=pheno, sd=sd,
                                   band_size=band_size)
   
-  # Jitter
-  if (jitter_scale > 0) {
-    set.seed(0)
-    jitter <- runif(nrow(original_dat),jitter_scale * -1,jitter_scale)
-    original_dat <- mutate(original_dat, day_cycle=day_cycle+jitter)
-  }
-  
-  predict <- data.frame(day_cycle=cycle_range, predict=predict, 
-                        ymin=predict-band_size*sd, ymax=predict+band_size*sd)
-  title <- paste0(probe, " (R^2 = ", R2, ")")
-  g <- ggplot(original_dat, aes(x=day_cycle, y=value)) +
-    geom_point(aes_string(text="text", color=color_str), size=point_size) + 
-    geom_line(data=predict, aes(x=day_cycle, y=predict), alpha=0.3, size=1.5) +
-    geom_ribbon(data=predict, aes(x=day_cycle, y=predict, ymin=ymin, ymax=ymax), alpha=0.1) +
-    labs(title=title)
+  # Plot
+  g <- expression_plot(dat=original_dat, predict=predict, band_size=band_size,
+                       sd=sd, jitter_scale=jitter_scale, color_str=color_str, 
+                       point_size=point_size, probe=probe, R2=R2)
   
   return(list(plot=g, outliers=outliers, coef=coef, R2=R2))
 }
