@@ -6,7 +6,6 @@
 # polynomial model or spline.
 
 ## TODO
-## Output coefficients for polynomial fit
 ## Polynomail with elastic net
 ## Spline model
 
@@ -136,6 +135,9 @@ fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
   x <- poly(cycle_range, poly_degree, raw=poly_raw)
   predict <- predict(fit, x)
   
+  # Get coefficients
+  coef <- fit$coefficients %>% t %>% as.data.frame %>% format(digits=2)
+  
   # Get residuals
   residuals <- fit$residuals[which(extended_dat$original)]
   names(residuals) <- extended_dat %>% filter(original) %>% .$sample_id
@@ -164,7 +166,7 @@ fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
     geom_ribbon(data=predict, aes(x=day_cycle, y=predict, ymin=ymin, ymax=ymax), alpha=0.1) +
     labs(title=title)
   
-  return(list(plot=g, outliers=outliers, R2=R2))
+  return(list(plot=g, outliers=outliers, coef=coef, R2=R2))
 }
 
 ############################################################
@@ -319,7 +321,10 @@ ui <- fluidPage(
         plotlyOutput("plotly")
       ),
       
-      hr()
+      hr(),
+      
+      # Coefficients output
+      tableOutput("coef")
       
     )
     
@@ -402,6 +407,11 @@ server <- function(input, output){
   output$plotly <- renderPlotly({
     message("plotly: ", rv$probe_name)
     rv$model$plot
+  })
+  
+  # Coefficients output
+  output$coef <- renderTable({
+    rv$model$coef
   })
   
   # Sample outliers table
