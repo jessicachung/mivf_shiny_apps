@@ -7,7 +7,6 @@
 
 ## TODO:
 ## Add functionality to display coefficients and display outliers inputs
-## Change text box to probe name when random
 
 library(shiny)
 library(ggplot2)
@@ -447,14 +446,14 @@ ui <- fluidPage(
           # Toggle for random
           conditionalPanel(
             condition="input.input_type == 3",
-            textInput("probe_text", 
+            textInput("random_text", 
                       label = h4("Illumina probe ID"), 
-                      value = "NA")
+                      value = "")
           ),
           
-          # Submit button
-          actionButton("submit", 
-                       label="Sumbit")
+          # Dynamic submit button
+          uiOutput("submit")
+          
         )
       )),
       
@@ -507,7 +506,7 @@ ui <- fluidPage(
 ############################################################
 ## Server
 
-server <- function(input, output){
+server <- function(input, output, session){
   
   # Set reactive values
   rv <- reactiveValues(
@@ -515,6 +514,12 @@ server <- function(input, output){
     exprs = combat_exprs,
     model = NA
   )
+  
+  # Update action button text
+  output$submit <- renderUI({
+    label <- ifelse(input$input_type == "3", "Randomise", "Submit")
+    actionButton("submit", label = label)
+  })
   
   # Update probe name when submit button is pressed
   observeEvent({input$submit; input$probe_select}, {
@@ -528,6 +533,10 @@ server <- function(input, output){
       # Random probe (overwrite seed from jitter)
       set.seed(Sys.time() %>% as.numeric)
       rv$probe_name <- sample(probes, 1)
+      # Update text box
+      updateTextInput(session, "random_text",
+                      value = paste(rv$probe_name)
+      )
     }
   })
   
