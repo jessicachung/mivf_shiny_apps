@@ -5,6 +5,10 @@
 # Plot expression a given probe along cycle days and fit a line with a
 # polynomial model or spline.
 
+## TODO:
+## Add functionality to display coefficients and display outliers inputs
+## Change text box to probe name when random
+
 library(shiny)
 library(ggplot2)
 library(dplyr)
@@ -281,9 +285,8 @@ fit_spline_model <- function(exprs, pheno, probe, extend_days, spline_df,
 ui <- fluidPage(
   titlePanel("Model expression across 28 day cycle"),
   
-  sidebarLayout(
-    sidebarPanel(
-      
+  fluidRow(
+    column(4, wellPanel(
       # Static or interactive plot
       radioButtons("plot_type",
                    label = h4("Plot type:"),
@@ -335,7 +338,6 @@ ui <- fluidPage(
       ),
       
       # Advanced options
-      # h4("Advanced Options:")
       checkboxInput("advanced",
                     label = "Show advanced options",
                     value = FALSE),
@@ -349,9 +351,15 @@ ui <- fluidPage(
                       value=FALSE)
       ),
       
+      # Show table of coefficients
+      conditionalPanel(condition="input.advanced == true",
+        checkboxInput("show_coefs",
+                      label = "Display coefficients",
+                      value = FALSE)
+      ),
+      
       # Expression values
-      conditionalPanel(
-        condition="input.advanced == true",
+      conditionalPanel(condition="input.advanced == true",
         selectInput("expression_values",
                     label = "Expression values:",
                     choices = list("Combat log2 values" = 1,
@@ -371,8 +379,7 @@ ui <- fluidPage(
         ),
       
       # Curve band size
-      conditionalPanel(
-        condition="input.advanced == true",
+      conditionalPanel(condition="input.advanced == true",
         sliderInput("band_size",
                     label = "Band size (std dev):",
                     min=0,
@@ -382,8 +389,7 @@ ui <- fluidPage(
       ),
       
       # Jitter to avoid overplotting
-      conditionalPanel(
-        condition="input.advanced == true",
+      conditionalPanel(condition="input.advanced == true",
         sliderInput("jitter_scale",
                     label = "Cycle day jitter:",
                     min=0,
@@ -393,8 +399,7 @@ ui <- fluidPage(
       ),
       
       # Extend days
-      conditionalPanel(
-        condition="input.advanced == true",
+      conditionalPanel(condition="input.advanced == true",
         sliderInput("extend_days",
                     label="Extend days forward and backwards:",
                     min=0,
@@ -403,39 +408,58 @@ ui <- fluidPage(
                     value=10)
       ),
       
+      checkboxInput("show_outliers",
+                    label = "Display outlier samples in table",
+                    value = FALSE)
+      
+    )),
+    
+    column(8, wellPanel(
+      fluidRow(
+        column(6,
+          # Choose input type
+          radioButtons("input_type",
+                       label = h4("Input type:"),
+                       choices = list("Probe ID from list" = 1,
+                                      "Enter probe ID" = 2,
+                                      "Random probe" = 3),
+                       selected = 3)
+        ),
+        
+        column(6,
+          # Toggle input type for drop down menu
+          conditionalPanel(
+            condition="input.input_type == 1",
+            selectInput("probe_select", 
+                        label = h4("Illumina probe ID"), 
+                        choices = probe_list,
+                        selected = probe_list[[1]])
+          ),
+          
+          # Toggle input type for probe text input
+          conditionalPanel(
+            condition="input.input_type == 2",
+            textInput("probe_text", 
+                      label = h4("Illumina probe ID"), 
+                      value = "ILMN_1774828")
+          ),
+          
+          # Toggle for random
+          conditionalPanel(
+            condition="input.input_type == 3",
+            textInput("probe_text", 
+                      label = h4("Illumina probe ID"), 
+                      value = "NA")
+          ),
+          
+          # Submit button
+          actionButton("submit", 
+                       label="Sumbit")
+        )
+      )),
+      
       hr(),
       
-      # Choose input type
-      radioButtons("input_type",
-                   label = h4("Input type:"),
-                   choices = list("Probe ID from list" = 1,
-                                  "Enter probe ID" = 2,
-                                  "Random probe" = 3),
-                   selected = 3),
-      
-      # Toggle input type for drop down menu
-      conditionalPanel(
-        condition="input.input_type == 1",
-        selectInput("probe_select", 
-                    label = h4("Illumina probe ID"), 
-                    choices = probe_list,
-                    selected = probe_list[[1]])
-      ),
-      
-      # Toggle input type for probe text input
-      conditionalPanel(
-        condition="input.input_type == 2",
-        textInput("probe_text", 
-                  label = h4("Illumina probe ID"), 
-                  value = "ILMN_1774828")
-      ),
-      
-      # Submit button
-      actionButton("submit", 
-                   label="Sumbit")
-      
-    ),
-    mainPanel(
       # Plot
       conditionalPanel(
         condition="input.plot_type == 1",
