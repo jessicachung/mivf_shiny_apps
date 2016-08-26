@@ -151,10 +151,11 @@ fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
   
   # Fit model
   x <- poly(extended_dat$day_cycle, poly_degree, raw=poly_raw)
+  poly_coefs <- attr(x,"coefs")
   fit <- lm(extended_dat$value ~ x)
   
   # Prediction at each day in cycle
-  x <- poly(cycle_range, poly_degree, raw=poly_raw)
+  x <- poly(cycle_range, poly_degree, coefs=poly_coefs, raw=poly_raw)
   predict <- predict(fit, x)
   
   # Get coefficients
@@ -196,11 +197,11 @@ fit_en_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degre
   
   # Fit model
   x <- poly(extended_dat$day_cycle, poly_degree, raw=poly_raw)
-  cv_fit <- cv.glmnet(x, extended_dat$value, 
-                      family="gaussian", alpha=elastic_alpha)
+  poly_coefs <- attr(x,"coefs")
+  cv_fit <- cv.glmnet(x, extended_dat$value, family="gaussian", alpha=elastic_alpha)
   
   # Prediction at each day in cycle
-  x <- poly(cycle_range, poly_degree, raw=poly_raw)
+  x <- poly(cycle_range, poly_degree, coefs=poly_coefs, raw=poly_raw)
   predict <- predict(cv_fit, newx=x, s="lambda.min")[,1]
   
   # Get coefficients
@@ -209,7 +210,7 @@ fit_en_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degre
   coef[coef == 0] <- "."
   
   # Get residuals
-  x <- poly(original_dat$day_cycle, poly_degree, raw=poly_raw)
+  x <- poly(original_dat$day_cycle, poly_degree, coefs=poly_coefs, raw=poly_raw)
   residuals <- predict(cv_fit, newx=x, s="lambda.min")[,1] - original_dat$value
   names(residuals) <- original_dat %>% .$sample_id
   
@@ -301,8 +302,6 @@ ui <- fluidPage(
                                   "B-spline" = 3),
                    selected = 2),
       
-      # Polynomial parameters
-      
       # Polynomial degrees
       conditionalPanel(
         condition="input.model_type == 1 || input.model_type == 2",
@@ -314,7 +313,6 @@ ui <- fluidPage(
                     value=10)
       ),
       
-      
       # Elastic net
       conditionalPanel(
         condition="input.model_type == 2",
@@ -324,14 +322,6 @@ ui <- fluidPage(
                     max=1,
                     step=0.05,
                     value=0.5)
-      ),
-      
-      # Polynomial raw
-      conditionalPanel(
-        condition="input.model_type == 1 || input.model_type == 2",
-        checkboxInput("poly_raw",
-                      label = "Raw polynomials (not orthogonal)",
-                      value=TRUE)
       ),
       
       # Spline parameters
@@ -350,6 +340,15 @@ ui <- fluidPage(
       checkboxInput("advanced",
                     label = "Show advanced options",
                     value = FALSE),
+      
+      # Polynomial raw
+      conditionalPanel(
+        condition="input.advanced == true && 
+                   (input.model_type == 1 || input.model_type == 2)",
+        checkboxInput("poly_raw",
+                      label = "Raw polynomials (not orthogonal)",
+                      value=FALSE)
+      ),
       
       # Expression values
       conditionalPanel(
