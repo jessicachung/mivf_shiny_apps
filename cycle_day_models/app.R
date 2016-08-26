@@ -183,6 +183,48 @@ ui <- fluidPage(
                                   "Interactive (plotly)" = 2),
                    selected = 1),
       
+      
+      # Type of model to fit
+      radioButtons("model_type",
+                   label = h4("Model:"),
+                   choices = list("Polynomial" = 1,
+                                  "Polynomial with elastic net" = 2,
+                                  "B-spline" = 3),
+                   selected = 1),
+      
+      # Polynomial parameters
+      
+      # Polynomial degrees
+      conditionalPanel(
+        condition="input.model_type == 1 || input.model_type == 2",
+        sliderInput("poly_degree",
+                    label = "Polynomial degree:",
+                    min=1,
+                    max=20,
+                    step=1,
+                    value=10)
+      ),
+      
+      
+      # Elastic net
+      conditionalPanel(
+        condition="input.model_type == 2",
+        sliderInput("elastic_alpha",
+                    label = "Elastic net alpha:",
+                    min=0,
+                    max=1,
+                    step=0.05,
+                    value=0.5)
+      ),
+      
+      # Polynomial raw
+      conditionalPanel(
+        condition="input.model_type == 1 || input.model_type == 2",
+        checkboxInput("poly_raw",
+                      label = "Raw polynomials (not orthogonal)",
+                      value=TRUE)
+      ),
+      
       # Advanced options
       # h4("Advanced Options:")
       checkboxInput("advanced",
@@ -199,25 +241,6 @@ ui <- fluidPage(
                                    "AFS score (log)" = "afs_score_log"),
                     selected = 1)
       }),
-      
-      # Polynomial degrees
-      conditionalPanel(
-        condition="input.advanced == true",
-        sliderInput("poly_degree",
-                    label = "Polynomial degree:",
-                    min=1,
-                    max=20,
-                    step=1,
-                    value=10)
-      ),
-    
-      # Polynomial raw
-      conditionalPanel(
-        condition="input.advanced == true",
-        checkboxInput("poly_raw",
-                      label = "Raw polynomials (not orthogonal)",
-                      value=TRUE)
-      ),
     
       # Curve band size
       conditionalPanel(
@@ -252,13 +275,15 @@ ui <- fluidPage(
                     value=10)
       ),
       
+      hr(),
+      
       # Choose input type
       radioButtons("input_type",
                    label = h4("Input type:"),
                    choices = list("Probe ID from list" = 1,
                                   "Enter probe ID" = 2,
                                   "Random probe" = 3),
-                   selected = 2),
+                   selected = 3),
       
       # Toggle input type for drop down menu
       conditionalPanel(
