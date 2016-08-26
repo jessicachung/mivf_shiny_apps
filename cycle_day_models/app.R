@@ -159,7 +159,7 @@ fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
   predict <- predict(fit, x)
   
   # Get coefficients
-  coef <- fit$coefficients %>% t %>% as.data.frame %>% format(digits=2)
+  coef <- fit$coefficients %>% t %>% as.data.frame
   
   # Get residuals
   residuals <- fit$residuals[which(extended_dat$original)]
@@ -205,8 +205,7 @@ fit_en_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degre
   predict <- predict(cv_fit, newx=x, s="lambda.min")[,1]
   
   # Get coefficients
-  coef <- coef(cv_fit, s = "lambda.min") %>% as.matrix %>% t %>% 
-    as.data.frame %>% format(digits=2)
+  coef <- coef(cv_fit, s = "lambda.min") %>% as.matrix %>% t %>% as.data.frame
   coef[coef == 0] <- "."
   
   # Get residuals
@@ -253,7 +252,7 @@ fit_spline_model <- function(exprs, pheno, probe, extend_days, spline_df,
   predict <- predict(fit, pred)
   
   # Get coefficients
-  coef <- fit$coefficients %>% t %>% as.data.frame %>% format(digits=2)
+  coef <- fit$coefficients %>% t %>% as.data.frame
   colnames(coef) <- colnames(coef) %>% str_replace("ns([^0-9]+)", "x")
   
   # Get residuals
@@ -561,7 +560,7 @@ server <- function(input, output){
   
   # Coefficients output
   output$coef <- renderTable({
-    rv$model$coef
+    rv$model$coef %>% format(digits=3)
   })
   
   # Sample outliers table
