@@ -5,10 +5,6 @@
 # Plot expression a given probe along cycle days and fit a line with a
 # polynomial model or spline.
 
-## TODO
-## Polynomail with elastic net
-## Spline model
-
 library(shiny)
 library(ggplot2)
 library(dplyr)
@@ -36,10 +32,16 @@ probe_df <- read.table("data/illumina_v4_annotation_with_detection.tsv", header=
   dplyr::select(IlluminaID, SymbolReannotated, GenomicLocation, ProbeQuality, MeanDetectionPVal:`90%`) %>%
   S4Vectors::rename(SymbolReannotated="Symbol")
 
+# Check all samples in phenotype dataframe have valid 28 day cycle values
+stopifnot(phenotype$day_cycle %in% seq(0.5,28,0.5))
+
 # Subset expression data
-combat_exprs <- combat_exprs[,phenotype[,"sample_id"]]
+combat_exprs <- combat_exprs[,phenotype$sample_id]
 cycle <- phenotype[,"day_cycle"]
 probes <- rownames(combat_exprs)
+
+# Scale expression around zero and make std dev one
+scaled_exprs <- combat_exprs %>% t %>% scale %>% t
 
 # Probes of interest from Jane
 probes_raw <- "ILMN_1764096
@@ -349,17 +351,27 @@ ui <- fluidPage(
                     label = "Show advanced options",
                     value = FALSE),
       
+      # Expression values
+      conditionalPanel(
+        condition="input.advanced == true",
+        selectInput("expression_values",
+                    label = "Expression values:",
+                    choices = list("Combat log2 values" = 1,
+                                   "Centered around zero" = 2),
+                    selected = 1)
+      ),
+      
       # Colour
       conditionalPanel(
-        condition="input.advanced == true", {
+        condition="input.advanced == true",
         selectInput("point_color",
                     label = "Point colours:",
                     choices = list("Endo status" = "endo",
                                    "Study" = "study",
                                    "AFS score (log)" = "afs_score_log"),
                     selected = 1)
-      }),
-    
+        ),
+      
       # Curve band size
       conditionalPanel(
         condition="input.advanced == true",
@@ -478,6 +490,7 @@ server <- function(input, output){
   # Set reactive values
   rv <- reactiveValues(
     probe_name = probe_list[[1]],
+    exprs = combat_exprs,
     model = NA
   )
   
@@ -496,10 +509,19 @@ server <- function(input, output){
     }
   })
   
+  # Update expression values when changed
+  observeEvent({input$expression_values}, {
+    if (input$expression_values == "1") {
+      rv$exprs <- combat_exprs
+    } else {
+      rv$exprs <- scaled_exprs
+    }
+  })
+  
   # Update model when arguments update
-  observeEvent({rv$probe_name; input$plot_type; input$model_type; input$poly_degree; 
-    input$poly_raw; input$elastic_alpha; input$spline_df; input$jitter_scale; 
-    input$band_size; input$point_color; input$extend_days}, {
+  observeEvent({rv$probe_name; rv$exprs; input$plot_type; input$model_type; 
+    input$poly_degree; input$poly_raw; input$elastic_alpha; input$spline_df; 
+    input$jitter_scale; input$band_size; input$point_color; input$extend_days}, {
       # Set point size smaller if plotting with Plotly
       if (input$plot_type == "1") {
         ps <- 1
@@ -508,20 +530,20 @@ server <- function(input, output){
       }
       if (input$model_type == "1") {
         # Polynomial
-        rv$model <- fit_polynomial_model(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
+        rv$model <- fit_polynomial_model(exprs=rv$exprs, pheno=phenotype, probe=rv$probe_name,
                         extend_days=input$extend_days, poly_degree=input$poly_degree,
                         poly_raw=input$poly_raw, jitter_scale=input$jitter_scale, 
                         band_size=input$band_size, color_str=input$point_color, point_size=ps)
       } else if (input$model_type == "2") {
         # Polynomial with elastic net
-        rv$model <- fit_en_polynomial_model(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
+        rv$model <- fit_en_polynomial_model(exprs=rv$exprs, pheno=phenotype, probe=rv$probe_name,
                         extend_days=input$extend_days, poly_degree=input$poly_degree,
                         poly_raw=input$poly_raw, elastic_alpha=input$elastic_alpha,
                         jitter_scale=input$jitter_scale, band_size=input$band_size, 
                         color_str=input$point_color, point_size=ps)
       } else {
         # Splines
-        rv$model <- fit_spline_model(exprs=combat_exprs, pheno=phenotype, probe=rv$probe_name,
+        rv$model <- fit_spline_model(exprs=rv$exprs, pheno=phenotype, probe=rv$probe_name,
                         extend_days=input$extend_days, spline_df=input$spline_df,
                         jitter_scale=input$jitter_scale, band_size=input$band_size, 
                         color_str=input$point_color, point_size=ps)
