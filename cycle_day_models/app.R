@@ -6,7 +6,7 @@
 # polynomial model or spline.
 
 ## TODO:
-## Add functionality to display coefficients and display outliers inputs
+## Change output tables to DT
 
 library(shiny)
 library(ggplot2)
@@ -410,6 +410,7 @@ ui <- fluidPage(
                     value=10)
       ),
       
+      # Show outlier table
       checkboxInput("show_outliers",
                     label = "Display outlier samples in table",
                     value = FALSE)
@@ -476,8 +477,11 @@ ui <- fluidPage(
       hr(),
       
       # Coefficients output
-      tableOutput("coef")
-      
+      conditionalPanel(
+        condition="input.show_coefs == true",
+        h4("Coefficients:"),
+        tableOutput("coef")
+      )
     )
     
   ),
@@ -485,10 +489,12 @@ ui <- fluidPage(
   hr(),
   
   # Outlier samples
-  h3("Outlier samples:"),
-  tableOutput("outlier_samples"),
-  
-  hr(),
+  conditionalPanel(
+    condition="input.show_outliers == true",
+    h3("Outlier samples:"),
+    tableOutput("outlier_samples"),
+    hr()
+  ),
   
   # Probe info table
   h3("Selected probe:"),
