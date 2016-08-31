@@ -9,6 +9,7 @@
 ## Change output tables to DT
 
 library(shiny)
+library(DT)
 library(ggplot2)
 library(dplyr)
 library(stringr)
@@ -413,7 +414,7 @@ ui <- fluidPage(
       # Show outlier table
       checkboxInput("show_outliers",
                     label = "Display outlier samples in table",
-                    value = FALSE)
+                    value = TRUE)
       
     )),
     
@@ -492,7 +493,7 @@ ui <- fluidPage(
   conditionalPanel(
     condition="input.show_outliers == true",
     h3("Outlier samples:"),
-    tableOutput("outlier_samples"),
+    dataTableOutput("outlier_samples"),
     hr()
   ),
   
@@ -606,8 +607,8 @@ server <- function(input, output, session){
   })
   
   # Sample outliers table
-  output$outlier_samples <- renderTable({
-    rv$model$outliers
+  output$outlier_samples <- renderDataTable({
+    datatable(rv$model$outliers, options=list(pageLength=15))
   })
   
   # Probe info table
