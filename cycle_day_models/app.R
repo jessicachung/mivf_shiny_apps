@@ -5,9 +5,6 @@
 # Plot expression a given probe along cycle days and fit a line with a
 # polynomial model or spline.
 
-## TODO:
-## Change output tables to DT
-
 library(shiny)
 library(DT)
 library(ggplot2)
@@ -200,10 +197,15 @@ fit_en_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degre
     extended_dat <- original_dat
   }
   
+  # Get weights
+  day_cycle_weights <- extended_dat %>% group_by(day_cycle) %>% summarise(weight=1/n())
+  extended_dat <- merge(extended_dat, day_cycle_weights, by="day_cycle")
+
   # Fit model
   x <- poly(extended_dat$day_cycle, poly_degree, raw=poly_raw)
   poly_coefs <- attr(x,"coefs")
-  cv_fit <- cv.glmnet(x, extended_dat$value, family="gaussian", alpha=elastic_alpha)
+  cv_fit <- cv.glmnet(x, extended_dat$value, weights=extended_dat$weight,
+                      family="gaussian", alpha=elastic_alpha)
   
   # Prediction at each day in cycle
   x <- poly(cycle_range, poly_degree, coefs=poly_coefs, raw=poly_raw)
