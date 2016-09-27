@@ -184,7 +184,7 @@ fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
 }
 
 fit_en_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
-    poly_raw, elastic_alpha, cycle_range=seq(0,28,by=0.5), jitter_scale=1, 
+    poly_raw, use_weights = FALSE, elastic_alpha, cycle_range=seq(0,28,by=0.5), jitter_scale=1, 
     band_size=2, color_str="endo", point_size=1) {
   # Check if probe is valid
   if (! probe %in% rownames(exprs)) return(NULL)
@@ -198,9 +198,13 @@ fit_en_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degre
   }
   
   # Get weights
-  day_cycle_weights <- extended_dat %>% group_by(day_cycle) %>% summarise(weight=1/n())
-  extended_dat <- merge(extended_dat, day_cycle_weights, by="day_cycle")
-
+  if (use_weights) {
+    day_cycle_weights <- extended_dat %>% group_by(day_cycle) %>% summarise(weight=1/n())
+    extended_dat <- merge(extended_dat, day_cycle_weights, by="day_cycle")
+  } else {
+    extended_dat <- extended_dat %>% mutate(weight=1)
+  }
+  
   # Fit model
   x <- poly(extended_dat$day_cycle, poly_degree, raw=poly_raw)
   poly_coefs <- attr(x,"coefs")
@@ -354,6 +358,14 @@ ui <- fluidPage(
         checkboxInput("poly_raw",
                       label = "Raw polynomials (not orthogonal)",
                       value=FALSE)
+      ),
+      
+      # Use weights
+      conditionalPanel(
+        condition="input.advanced == true && input.model_type == 2",
+        checkboxInput("use_weights",
+                      label = "Weighted equally for each cycle day",
+                      value = FALSE)
       ),
       
       # Show table of coefficients
@@ -564,7 +576,8 @@ server <- function(input, output, session){
   # Update model when arguments update
   observeEvent({rv$probe_name; rv$exprs; input$plot_type; input$model_type; 
     input$poly_degree; input$poly_raw; input$elastic_alpha; input$spline_df; 
-    input$jitter_scale; input$band_size; input$point_color; input$extend_days}, {
+    input$jitter_scale; input$band_size; input$point_color; input$extend_days;
+    input$use_weights}, {
       # Set point size smaller if plotting with Plotly
       if (input$plot_type == "1") {
         ps <- 1
@@ -583,7 +596,7 @@ server <- function(input, output, session){
                         extend_days=input$extend_days, poly_degree=input$poly_degree,
                         poly_raw=input$poly_raw, elastic_alpha=input$elastic_alpha,
                         jitter_scale=input$jitter_scale, band_size=input$band_size, 
-                        color_str=input$point_color, point_size=ps)
+                        color_str=input$point_color, point_size=ps, use_weights=input$use_weights)
       } else {
         # Splines
         rv$model <- fit_spline_model(exprs=rv$exprs, pheno=phenotype, probe=rv$probe_name,
