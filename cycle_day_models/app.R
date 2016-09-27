@@ -19,57 +19,10 @@ library(splines)
 # setwd("~/Work/2016_mivf/shiny_apps/cycle_day_plots")
 
 # Expression data
-load("data/combat_exprs.rda")
+load("data/cycle_data.RData")
 
-# Phenotype info
-phenotype <- read.table("data/cycle_phenotype_2016-08-11.tsv", header=TRUE, sep="\t", 
-                        stringsAsFactors=FALSE) %>%
-  mutate(endo=factor(endo), afs_score_log=log2(afs_score+0.01))
-
-# Probe info
-probe_df <- read.table("data/illumina_v4_annotation_with_detection.tsv", header=TRUE, sep="\t", 
-                       stringsAsFactors=FALSE) %>% 
-  S4Vectors::rename(X10.="10%", X50.="50%", X90.="90%") %>%
-  dplyr::select(IlluminaID, SymbolReannotated, GenomicLocation, ProbeQuality, MeanDetectionPVal:`90%`) %>%
-  S4Vectors::rename(SymbolReannotated="Symbol")
-
-# Check all samples in phenotype dataframe have valid 28 day cycle values
-stopifnot(phenotype$day_cycle %in% seq(0.5,28,0.5))
-
-# Subset expression data
-combat_exprs <- combat_exprs[,phenotype$sample_id]
 cycle <- phenotype[,"day_cycle"]
 probes <- rownames(combat_exprs)
-
-# Scale expression around zero and make std dev one
-scaled_exprs <- combat_exprs %>% t %>% scale %>% t
-
-# Probes of interest from Jane
-probes_raw <- "ILMN_1764096
-ILMN_3194087
-ILMN_3238259
-ILMN_3272768
-ILMN_1734552
-ILMN_1652431
-ILMN_1696183
-ILMN_1743290
-ILMN_1786015
-ILMN_1807529
-ILMN_2091454
-ILMN_2169736
-ILMN_2367126
-ILMN_1740706
-ILMN_2060719
-ILMN_1784217
-ILMN_1729033
-ILMN_1782743"
-
-# Make list of probes of interest for drop down menu
-probes_of_interest <- probes_raw %>% str_split("\n") %>% unlist
-probe_list <- list()
-for (p in probes_of_interest) {
-  probe_list[[p]] <- p
-}
 
 ############################################################
 ## Functions
