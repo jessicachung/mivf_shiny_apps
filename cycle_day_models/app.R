@@ -16,13 +16,12 @@ library(stats)
 library(glmnet)
 library(splines)
 
-# setwd("~/Work/2016_mivf/shiny_apps/cycle_day_plots")
+# setwd("~/Work/2016_mivf/shiny_apps/cycle_day_models")
 
-# Expression data
+# Load data
 load("data/cycle_data.RData")
-
-cycle <- phenotype[,"day_cycle"]
 probes <- rownames(combat_exprs)
+phenotype <- phenotype %>% mutate(pathology_day=day_cycle)
 
 ############################################################
 ## Functions
@@ -54,10 +53,11 @@ extend_days_data <- function(dat, extend_days) {
 get_outlier_samples <- function(residuals, pheno, sd, band_size) {
   # Get data frame of outlier samples
   stopifnot(pheno[,"sample_id"] == names(residuals))
-  df <- pheno %>% mutate(residuals=residuals) %>%
+  df <- pheno %>% mutate(residuals=round(residuals,4)) %>%
     filter(abs(residuals) - band_size * sd > 0) %>% 
     arrange(day_cycle) %>% 
-    dplyr::select(-text, -afs_score_log)
+    dplyr::select(-text, -afs_score_log, -sample_type, -sample_section, -day_cycle) %>%
+    dplyr::select(sample_id, contains("day"), everything())
   return(df)
 }
 
@@ -337,6 +337,16 @@ ui <- fluidPage(
                     selected = 1)
       ),
       
+      # 28-day cycle values
+      conditionalPanel(condition="input.advanced == true",
+                       selectInput("day_cycle_values",
+                                   label = "28-day cycle values:",
+                                   choices = list("Original pathology" = 1,
+                                                  "GLM proliferative" = 2,
+                                                  "SVM classification" = 3),
+                                   selected = 1)
+      ),
+      
       # Colour
       conditionalPanel(
         condition="input.advanced == true",
@@ -489,6 +499,7 @@ server <- function(input, output, session){
   rv <- reactiveValues(
     probe_name = probe_list[[1]],
     exprs = combat_exprs,
+    phenotype = phenotype,
     model = NA
   )
   
@@ -526,8 +537,19 @@ server <- function(input, output, session){
     }
   })
   
+  # Update day cycle when changed
+  observeEvent({input$day_cycle_values}, {
+    if (input$day_cycle_values == "1") {
+      rv$phenotype$day_cycle <- rv$phenotype$pathology_day
+    } else if (input$day_cycle_values == "2") {
+      rv$phenotype$day_cycle <- rv$phenotype$glm_predicted_day
+    } else {
+      rv$phenotype$day_cycle <- rv$phenotype$svm_predicted_day
+    }
+  })
+  
   # Update model when arguments update
-  observeEvent({rv$probe_name; rv$exprs; input$plot_type; input$model_type; 
+  observeEvent({rv$probe_name; rv$exprs; rv$phenotype; input$plot_type; input$model_type; 
     input$poly_degree; input$poly_raw; input$elastic_alpha; input$spline_df; 
     input$jitter_scale; input$band_size; input$point_color; input$extend_days;
     input$use_weights}, {
@@ -539,20 +561,20 @@ server <- function(input, output, session){
       }
       if (input$model_type == "1") {
         # Polynomial
-        rv$model <- fit_polynomial_model(exprs=rv$exprs, pheno=phenotype, probe=rv$probe_name,
+        rv$model <- fit_polynomial_model(exprs=rv$exprs, pheno=rv$phenotype, probe=rv$probe_name,
                         extend_days=input$extend_days, poly_degree=input$poly_degree,
                         poly_raw=input$poly_raw, jitter_scale=input$jitter_scale, 
                         band_size=input$band_size, color_str=input$point_color, point_size=ps)
       } else if (input$model_type == "2") {
         # Polynomial with elastic net
-        rv$model <- fit_en_polynomial_model(exprs=rv$exprs, pheno=phenotype, probe=rv$probe_name,
+        rv$model <- fit_en_polynomial_model(exprs=rv$exprs, pheno=rv$phenotype, probe=rv$probe_name,
                         extend_days=input$extend_days, poly_degree=input$poly_degree,
                         poly_raw=input$poly_raw, elastic_alpha=input$elastic_alpha,
                         jitter_scale=input$jitter_scale, band_size=input$band_size, 
                         color_str=input$point_color, point_size=ps, use_weights=input$use_weights)
       } else {
         # Splines
-        rv$model <- fit_spline_model(exprs=rv$exprs, pheno=phenotype, probe=rv$probe_name,
+        rv$model <- fit_spline_model(exprs=rv$exprs, pheno=rv$phenotype, probe=rv$probe_name,
                         extend_days=input$extend_days, spline_df=input$spline_df,
                         jitter_scale=input$jitter_scale, band_size=input$band_size, 
                         color_str=input$point_color, point_size=ps)
