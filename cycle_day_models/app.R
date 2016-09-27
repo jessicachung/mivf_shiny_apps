@@ -89,6 +89,21 @@ expression_plot <- function(dat, predict, band_size, sd, jitter_scale,
   return(g)
 }
 
+no_model <- function(exprs, pheno, probe, jitter_scale=1, color_str="endo",
+                     point_size=1) {
+  dat <- get_tidy_cycle_data(exprs, pheno, probe)
+  if (jitter_scale > 0) {
+    set.seed(0)
+    # Add jitter to avoid overplotting
+    jitter <- runif(nrow(dat),jitter_scale * -1,jitter_scale)
+    dat <- mutate(dat, day_cycle=day_cycle+jitter)
+  }
+  g <- ggplot(dat, aes(x=day_cycle, y=value)) +
+    geom_point(aes_string(text="text", color=color_str), size=point_size) + 
+    labs(title=probe)
+  return(list(plot=g, outliers=NULL, coef=NULL, R2=NULL))
+}
+
 fit_polynomial_model <- function(exprs, pheno, probe, extend_days, poly_degree,
     poly_raw, cycle_range=seq(0,28,by=0.5), jitter_scale=1, band_size=2, 
     color_str="endo", point_size=1) {
@@ -263,7 +278,8 @@ ui <- fluidPage(
                    label = h4("Model:"),
                    choices = list("Polynomial" = 1,
                                   "Polynomial with elastic net" = 2,
-                                  "B-spline" = 3),
+                                  "B-spline" = 3,
+                                  "None" = 4),
                    selected = 2),
       
       # Polynomial degrees
@@ -274,7 +290,7 @@ ui <- fluidPage(
                     min=1,
                     max=20,
                     step=1,
-                    value=10)
+                    value=13)
       ),
       
       # Elastic net
@@ -344,7 +360,7 @@ ui <- fluidPage(
                                    choices = list("Original pathology" = 1,
                                                   "GLM proliferative" = 2,
                                                   "SVM classification" = 3),
-                                   selected = 1)
+                                   selected = 3)
       ),
       
       # Colour
@@ -373,9 +389,9 @@ ui <- fluidPage(
         sliderInput("jitter_scale",
                     label = "Cycle day jitter:",
                     min=0,
-                    max=2,
-                    step=0.1,
-                    value=0.5)
+                    max=1,
+                    step=0.05,
+                    value=0.1)
       ),
       
       # Extend days
@@ -385,7 +401,7 @@ ui <- fluidPage(
                     min=0,
                     max=28,
                     step=0.5,
-                    value=10)
+                    value=12)
       ),
       
       # Show outlier table
@@ -572,12 +588,15 @@ server <- function(input, output, session){
                         poly_raw=input$poly_raw, elastic_alpha=input$elastic_alpha,
                         jitter_scale=input$jitter_scale, band_size=input$band_size, 
                         color_str=input$point_color, point_size=ps, use_weights=input$use_weights)
-      } else {
+      } else if (input$model_type == "3") {
         # Splines
         rv$model <- fit_spline_model(exprs=rv$exprs, pheno=rv$phenotype, probe=rv$probe_name,
                         extend_days=input$extend_days, spline_df=input$spline_df,
                         jitter_scale=input$jitter_scale, band_size=input$band_size, 
                         color_str=input$point_color, point_size=ps)
+      } else {
+        rv$model <- no_model(exprs=rv$exprs, pheno=rv$phenotype, probe=rv$probe_name,
+                             color_str=input$point_color, point_size=ps)
       }
     })
   
