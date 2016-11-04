@@ -11,17 +11,15 @@ data_dir <- "/Users/Jessica/Work/2016_mivf/r_projects/data/"
 # LOAD DATA
 
 # Expression data
-load(paste0(data_dir, "combined_datasets/combat_exprs.rda"))
+load(paste0(data_dir, "combined_datasets/bg_rsn_combat_2batch_exprs.rda"))
+load(paste0(data_dir, "combined_datasets/combat_2batch_cycle_exprs.rda"))
 
 # Phenotype info
 phenotype <- read.table(
-    paste0(data_dir, "combined_datasets/phenotype_2016-09-27.tsv"), 
+    paste0(data_dir, "combined_datasets/phenotype_v2.tsv"), 
     header=TRUE, sep="\t", stringsAsFactors=FALSE) %>%
   mutate(endo=factor(endo))
 rownames(phenotype) <- phenotype$sample_id
-
-# Check sample order
-stopifnot(colnames(combat_exprs) == rownames(phenotype))
 
 # Probe info
 probe_df <- read.table(
@@ -36,17 +34,17 @@ probe_df <- read.table(
 # SUBSET DATA
 
 # Only get samples with a 28 day cycle value
-phenotype_data <- phenotype %>% filter(! is.na(svm_predicted_day))
+phenotype_data <- phenotype %>% 
+  filter(sample_id %in% colnames(combat_2batch_cycle_exprs),
+         ! is.na(day_cycle_v2))
 
 # Check all samples in phenotype dataframe have valid 28 day cycle values
-stopifnot(phenotype_data$day_cycle %in% seq(0.5,28,0.5))
-stopifnot(phenotype_data$svm_predicted_day %in% seq(0.5,28,0.5))
+stopifnot(phenotype_data$day_cycle_v2 %in% seq(0.5,28,0.5))
+stopifnot(phenotype_data$svm_predicted_day %in% seq(0,28,0.5))
 
 # Subset expression data
-combat_exprs <- combat_exprs[,phenotype_data$sample_id]
-
-# Scale expression around zero and make std dev one
-scaled_exprs <- combat_exprs %>% t %>% scale %>% t
+combat_2batch_exprs <- bg_rsn_combat_2batch_exprs[,phenotype_data$sample_id]
+combat_2batch_cycle_exprs <- combat_2batch_cycle_exprs[,phenotype_data$sample_id]
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # PROBES OF INTEREST
@@ -82,5 +80,5 @@ for (p in probes_of_interest) {
 # SAVE RDATA
 
 phenotype <- phenotype_data
-save(combat_exprs, scaled_exprs, phenotype, probe_df, probe_list,
-     file="data/cycle_data.RData")
+save(combat_2batch_exprs, combat_2batch_cycle_exprs, phenotype, probe_df, 
+     probe_list, file="data/cycle_data.RData")

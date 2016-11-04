@@ -20,7 +20,7 @@ library(splines)
 
 # Load data
 load("data/cycle_data.RData")
-probes <- rownames(combat_exprs)
+probes <- rownames(combat_2batch_exprs)
 phenotype <- phenotype %>% mutate(pathology_day=day_cycle)
 
 ############################################################
@@ -341,26 +341,26 @@ ui <- fluidPage(
       conditionalPanel(condition="input.advanced == true",
         checkboxInput("show_coefs",
                       label = "Display coefficients",
-                      value = FALSE)
+                      value = TRUE)
       ),
       
       # Expression values
       conditionalPanel(condition="input.advanced == true",
         selectInput("expression_values",
                     label = "Expression values:",
-                    choices = list("Combat log2 values" = 1,
-                                   "Centered around zero" = 2),
-                    selected = 1)
+                    choices = list("Combat 2batch expression" = 1,
+                                   "Combat 2batch cycle expression" = 2),
+                    selected = 2)
       ),
       
       # 28-day cycle values
       conditionalPanel(condition="input.advanced == true",
                        selectInput("day_cycle_values",
                                    label = "28-day cycle values:",
-                                   choices = list("Original pathology" = 1,
-                                                  "GLM proliferative" = 2,
+                                   choices = list("Updated cycle values" = 1,
+                                                  "Original pathology" = 2,
                                                   "SVM classification" = 3),
-                                   selected = 3)
+                                   selected = 1)
       ),
       
       # Colour
@@ -514,7 +514,7 @@ server <- function(input, output, session){
   # Set reactive values
   rv <- reactiveValues(
     probe_name = probe_list[[1]],
-    exprs = combat_exprs,
+    exprs = combat_2batch_cycle_exprs,
     phenotype = phenotype,
     model = NA
   )
@@ -547,18 +547,18 @@ server <- function(input, output, session){
   # Update expression values when changed
   observeEvent({input$expression_values}, {
     if (input$expression_values == "1") {
-      rv$exprs <- combat_exprs
+      rv$exprs <- combat_2batch_exprs
     } else {
-      rv$exprs <- scaled_exprs
+      rv$exprs <- combat_2batch_cycle_exprs
     }
   })
   
   # Update day cycle when changed
   observeEvent({input$day_cycle_values}, {
     if (input$day_cycle_values == "1") {
-      rv$phenotype$day_cycle <- rv$phenotype$pathology_day
+      rv$phenotype$day_cycle <- rv$phenotype$day_cycle_v2
     } else if (input$day_cycle_values == "2") {
-      rv$phenotype$day_cycle <- rv$phenotype$glm_predicted_day
+      rv$phenotype$day_cycle <- rv$phenotype$pathology_day
     } else {
       rv$phenotype$day_cycle <- rv$phenotype$svm_predicted_day
     }
