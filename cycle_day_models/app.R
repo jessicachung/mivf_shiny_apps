@@ -225,7 +225,17 @@ fit_spline_model <- function(exprs, pheno, probe, extend_days, spline_df,
   }
   
   # Fit model
-  fit <- lm(value ~ ns(day_cycle, df=spline_df), data=extended_dat)
+  model_ok <- FALSE
+  tryCatch(
+    {fit <- lm(value ~ ns(day_cycle, df=spline_df), data=extended_dat);
+    model_ok <- TRUE},
+    error=function(e) {print("fail")}
+  )
+  
+  # Return nothing if model fails
+  if (! model_ok) {
+    return()
+  }
   
   # Prediction at each day in cycle
   pred <- data.frame(day_cycle=cycle_range)
