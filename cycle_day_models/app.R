@@ -596,6 +596,7 @@ server <- function(input, output, session){
                         color_str=input$point_color, point_size=ps)
       } else {
         rv$model <- no_model(exprs=rv$exprs, pheno=rv$phenotype, probe=rv$probe_name,
+                             jitter_scale=input$jitter_scale,
                              color_str=input$point_color, point_size=ps)
       }
     })
