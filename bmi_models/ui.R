@@ -24,6 +24,12 @@ shinyUI(fluidPage(
                                  "Checkbox" = "checkbox"),
                   selected = "slider"),
       
+      selectInput("n_top_table",
+                  label = "Number of genes to list:",
+                  choices = list("100" = 100,
+                                 "All" = Inf),
+                  selected = 100),
+      
       # Group 1 & 2 slider input
       conditionalPanel(
         condition="input.selection == 'slider'",

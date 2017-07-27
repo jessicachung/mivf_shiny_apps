@@ -81,7 +81,7 @@ shinyServer(function(input, output) {
   })
   
   # Perform DGE analysis and get top table
-  observeEvent({rv$group_1_samples; rv$group_2_samples}, {
+  observeEvent({rv$group_1_samples; rv$group_2_samples; input$n_top_table}, {
     message("Performing DGE analysis...")
     
     # Subset data
@@ -103,7 +103,7 @@ shinyServer(function(input, output) {
       # Fit model
       lm <- lmFit(exprs[,pheno$sample_id], design)
       fit <- eBayes(lm)
-      top_table <- topTable(fit, coef=2, n=100) %>% 
+      top_table <- topTable(fit, coef=2, n=input$n_top_table) %>% 
         tibble::rownames_to_column(var="IlluminaID") %>%
         select(-t, -B) %>%
         merge(probe_info %>% select(IlluminaID, SymbolReannotated), 
