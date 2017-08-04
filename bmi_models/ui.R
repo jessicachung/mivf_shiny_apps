@@ -18,17 +18,30 @@ shinyUI(fluidPage(
                                  "Interactive" = "plotly"),
                   selected = "ggplot"),
       
-      selectInput("selection",
-                  label = "Selection method:",
-                  choices = list("Slider" = "slider",
-                                 "Checkbox" = "checkbox"),
-                  selected = "slider"),
+      selectInput("exprs_selection",
+                  label = "Gene subset:",
+                  choices = list("All good genes" = "good",
+                                 "Genes with priors" = "prior")),
+      
+      selectInput("patient_selection",
+                  label = "Patient subset:",
+                  choices = list("All patients" = "all",
+                                 "Endo patients" = "endo",
+                                 "Control patients" = "control",
+                                 "WOI patients (16-24)" = "woi",
+                                 "Cycle stage 4" = "cycle4")),
       
       selectInput("n_top_table",
                   label = "Number of genes to list:",
                   choices = list("100" = 100,
                                  "All" = Inf),
                   selected = 100),
+      
+      selectInput("selection",
+                  label = "Selection method:",
+                  choices = list("Slider" = "slider",
+                                 "Checkbox" = "checkbox"),
+                  selected = "slider"),
       
       # Group 1 & 2 slider input
       conditionalPanel(
