@@ -380,7 +380,8 @@ ui <- fluidPage(
                     label = "Point colours:",
                     choices = list("Endo status" = "endo",
                                    "Study" = "study",
-                                   "AFS score (log)" = "afs_score_log"),
+                                   "AFS score (log)" = "afs_score_log",
+                                   "Batch" = "batch"),
                     selected = 1)
         ),
       
