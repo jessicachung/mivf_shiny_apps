@@ -21,15 +21,17 @@ shinyUI(fluidPage(
       selectInput("exprs_selection",
                   label = "Gene subset:",
                   choices = list("All good genes" = "good",
-                                 "Genes with priors" = "prior")),
+                                 "Genes with priors" = "prior",
+                                 "Genes with high expression" = "high")),
       
       selectInput("patient_selection",
                   label = "Patient subset:",
                   choices = list("All patients" = "all",
                                  "Endo patients" = "endo",
                                  "Control patients" = "control",
-                                 "WOI patients (16-24)" = "woi",
-                                 "Cycle stage 4" = "cycle4")),
+                                 "WOI patients (stage 4-6)" = "woi",
+                                 "Cycle stage 4" = "cycle4",
+                                 "AFS score 1-5" = "afs1-5")),
       
       selectInput("n_top_table",
                   label = "Number of genes to list:",
@@ -63,19 +65,19 @@ shinyUI(fluidPage(
         condition="input.selection == 'checkbox'",
         checkboxGroupInput("checkbox_1",
                            label = "Group 1 BMI classes:",
-                           choices = list("Underweight" = "Underweight",
-                                          "Normal" = "Normal",
-                                          "Pre-obese" = "Pre-obese",
-                                          "Obese" = "Obese"),
-                           selected = c("Underweight", "Normal")
+                           choices = list("Underweight" = "underweight",
+                                          "Normal" = "normal",
+                                          "Pre-obese" = "preobese",
+                                          "Obese" = "obese"),
+                           selected = c("underweight", "normal")
         ),
         checkboxGroupInput("checkbox_2",
                            label = "Group 2 BMI classes:",
-                           choices = list("Underweight" = "Underweight",
-                                          "Normal" = "Normal",
-                                          "Pre-obese" = "Pre-obese",
-                                          "Obese" = "Obese"),
-                           selected = c("Pre-obese", "Obese")
+                           choices = list("Underweight" = "underweight",
+                                          "Normal" = "normal",
+                                          "Pre-obese" = "preobese",
+                                          "Obese" = "obese"),
+                           selected = c("preobese", "obese")
         )
       ),
       

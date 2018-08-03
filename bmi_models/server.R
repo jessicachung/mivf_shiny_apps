@@ -11,29 +11,30 @@ library(plotly)
 ## Load and arrange data
 ############################################################
 
-load("data/cc_combat_2batch_cycle_exprs.rda")
-all_phenotype <- readRDS("data/phenotype.rds")
-probe_info <- readRDS("data/probe_info.rds")
-prior_genes <- readRDS("data/prior_genes.rds")
-
-# Get samples with BMI values
-phenotype <- all_phenotype %>% filter(include)
+load("data/bmi_models.RData")
 
 # Filter probes
 good_probes <- probe_info %>% 
   filter(pass_threshold & pass_quality) %>% .$IlluminaID
 
 # Subset expression matrix
-good_exprs <- cc_combat_2batch_cycle_exprs[good_probes, phenotype$sample_id]
+good_exprs <- cc_exprs[good_probes, phenotype$sample_id]
 
 # Dimensions
 message(paste0("Expression matrix dimensions: ", 
                nrow(good_exprs)), " x ", ncol(good_exprs))
 
 # Subset expression matrix with prior genes
-subset_exprs <- cc_combat_2batch_cycle_exprs[prior_genes, phenotype$sample_id]
+subset_exprs <- cc_exprs[prior_genes, phenotype$sample_id]
 message(paste0("Expression matrix dimensions with prior genes: ", 
                nrow(subset_exprs)), " x ", ncol(subset_exprs))
+
+# Subset expression with highly-expressed genes (> 7)
+gene_mean <- apply(good_exprs, 1, mean)
+high_exprs <- good_exprs[gene_mean > 7,]
+
+message(paste0("Expression matrix dimensions with high genes: ", 
+               nrow(high_exprs)), " x ", ncol(high_exprs))
 
 ############################################################
 ## Functions
@@ -73,6 +74,8 @@ shinyServer(function(input, output) {
       rv$exprs <- good_exprs
     } else if (input$exprs_selection == "prior") {
       rv$exprs <- subset_exprs
+    } else if (input$exprs_selection == "high") {
+      rv$exprs <- high_exprs
     }
   })
   
@@ -85,9 +88,11 @@ shinyServer(function(input, output) {
     } else if (input$patient_selection == "control") {
       rv$phenotype <- phenotype %>% filter(endo == 0)
     } else if (input$patient_selection == "woi") {
-      rv$phenotype <- phenotype %>% filter(between(day_cycle_v2, 16, 24))
+      rv$phenotype <- phenotype %>% filter(between(cycle_stage, 4, 6))
     } else if(input$patient_selection == "cycle4") {
-      rv$phenotype <- phenotype %>% filter(cycle_stage_v2 == 4)
+      rv$phenotype <- phenotype %>% filter(cycle_stage == 4)
+    } else if(input$patient_selection == "afs1-5") {
+      rv$phenotype <- phenotype %>% filter(between(afs_score, 1, 5))
     }
   })
   
@@ -119,7 +124,7 @@ shinyServer(function(input, output) {
       message("Performing DGE analysis...")
       
       # Subset data
-      pheno <- rv$phenotype %>% select(sample_id:subclass, batch, text) %>%
+      pheno <- rv$phenotype %>% 
         filter(sample_id %in% c(rv$group_1_samples, rv$group_2_samples)) %>%
         mutate(group=ifelse(sample_id %in% rv$group_1_samples, "Group 1", "Group 2"))
       
