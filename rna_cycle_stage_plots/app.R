@@ -32,7 +32,8 @@ phenotype_df <- phenotype_df %>%
 counts <- qld_counts$counts[,phenotype_df[,"sample_id"]]
 
 # Filter counts
-ok <- filterByExpr(counts)
+# ok <- filterByExpr(counts)
+ok <- rowMeans(cpm(counts) > 0.5) > 0.5
 counts <- counts[ok,]
 gene_info <- merge(qld_counts$gene_info[ok,], 
              all_annotations %>% select(-strand), 
