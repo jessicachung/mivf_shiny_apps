@@ -15,7 +15,7 @@ shinyUI(fluidPage(
                   label = "Plot type:",
                   choices = list("Static" = "ggplot",
                                  "Interactive" = "plotly"),
-                  selected = "ggplot"),
+                  selected = "plotly"),
       
       
       selectInput("exprs_dataset",
@@ -52,8 +52,10 @@ shinyUI(fluidPage(
                                  "Cycle stage" = "path_menst_cycle",
                                  "Batch" = "batch",
                                  "Sample type" = "sample_type"),
-                  selected = "endo")
+                  selected = "endo_groub"),
       
+      br(),
+      actionButton("refresh", label = "Refresh")
       
       )
       

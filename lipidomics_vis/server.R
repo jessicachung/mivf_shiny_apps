@@ -64,6 +64,7 @@ shinyServer(function(input, output) {
       rv$feature_data <- feature_data
     } else if (input$lipid_subset == "random_100") {
       random_indices <- sample(seq_len(nrow(feature_data)), 100) %>% sort
+      # random_indices[1] <- 1
       rv$feature_data <- feature_data[random_indices,]
     } else if (input$lipid_subset == "random_1000") {
       random_indices <- sample(seq_len(nrow(feature_data)), 1000) %>% sort
@@ -87,6 +88,12 @@ shinyServer(function(input, output) {
     }
   })
 
+  observeEvent({input$refresh}, {
+    # Sometime the server hangs when plotting
+    message("Refresh")
+    rv$plot_data <- rv$plot_data
+  })
+  
   # Get data for plotting expression
   observeEvent({rv$selected_lipid; input$exprs_dataset}, {
     message("Updating plot data: ", rv$selected_lipid)
