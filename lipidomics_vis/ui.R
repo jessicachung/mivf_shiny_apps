@@ -22,14 +22,16 @@ shinyUI(fluidPage(
                   label = "Dataset:",
                   choices = list("Raw data" = "raw",
                                  "Quantile normalised (+imputed)" = "qnorm",
-                                 "Combat normalised (batch + cycle)" = "combat"),
+                                 "Combat normalised (batch + cycle)" = "combat",
+                                 "Metaboanalyst normalised (median + log + auto)" = "metablo"),
                   selected = "qnorm"),
       
       selectInput("lipid_subset",
                   label = "Lipids to display in table:",
                   choices = list("All lipids (can be slow!)" = "all",
                                  "Random 100" = "random_100",
-                                 "Random 1000" = "random_1000"),
+                                 "Random 1000" = "random_1000",
+                                 "Spike-in controls" = "controls"),
                   selected = "random_100"),
       
       selectInput("sample_label",

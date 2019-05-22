@@ -24,6 +24,11 @@ feature_data <- feature_data %>%
          # batch_pval=ifelse(is.na(batch_pval), Inf, batch_pval),
          mz=mz, rt=rt) %>%
   select(mz_rt, mz, rt, pass_threshold, everything())
+spike_in_controls <- 
+  c("487.3456_2.96", "518.3144_2.67", "529.3917_2.87", "610.5316_10.75", 
+    "675.5366_7.45", "675.6492_18.15", "712.6343_14.7", "753.5942_9.11", 
+    "755.5653_10.61", "781.4483_13.88", "829.7874_17.56", "846.744_16.99"
+  )
 
 ############################################################
 ## Functions
@@ -54,6 +59,8 @@ shinyServer(function(input, output) {
       rv$exprs <- imputed_matrix
     } else if (input$exprs_dataset == "combat") {
       rv$exprs <- combat_cc
+    } else if (input$exprs_dataset == "metablo") {
+      rv$exprs <- metablo_matrix
     }
   })
   
@@ -64,11 +71,12 @@ shinyServer(function(input, output) {
       rv$feature_data <- feature_data
     } else if (input$lipid_subset == "random_100") {
       random_indices <- sample(seq_len(nrow(feature_data)), 100) %>% sort
-      # random_indices[1] <- 1
       rv$feature_data <- feature_data[random_indices,]
     } else if (input$lipid_subset == "random_1000") {
       random_indices <- sample(seq_len(nrow(feature_data)), 1000) %>% sort
       rv$feature_data <- feature_data[random_indices,]
+    } else if (input$lipid_subset == "controls") {
+      rv$feature_data <- feature_data %>% filter(mz_rt %in% spike_in_controls)
     }
   })
   
