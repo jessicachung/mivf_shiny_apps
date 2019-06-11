@@ -18,11 +18,13 @@ mz <- feature_data$mz_rt %>% str_split("_") %>% sapply(function(x) x[1]) %>%
   as.numeric
 rt <- feature_data$mz_rt %>% str_split("_") %>% sapply(function(x) x[2]) %>%
   as.numeric
+abs_sum <- apply(metablo_matrix, 1, function(x) {sum(abs(x))})
+
 feature_data <- feature_data %>% 
   mutate(pass_threshold=(! is.na(shapiro_pval)),
          # shapiro_pval=ifelse(is.na(shapiro_pval), Inf, shapiro_pval),
          # batch_pval=ifelse(is.na(batch_pval), Inf, batch_pval),
-         mz=mz, rt=rt) %>%
+         mz=mz, rt=rt, abs_sum=abs_sum) %>%
   select(mz_rt, mz, rt, pass_threshold, everything())
 spike_in_controls <- 
   c("487.3456_2.96", "518.3144_2.67", "529.3917_2.87", "610.5316_10.75", 
@@ -75,6 +77,10 @@ shinyServer(function(input, output) {
     } else if (input$lipid_subset == "random_1000") {
       random_indices <- sample(seq_len(nrow(feature_data)), 1000) %>% sort
       rv$feature_data <- feature_data[random_indices,]
+    } else if (input$lipid_subset == "bimodal_candidates") {
+      rv$feature_data <- feature_data %>% 
+        filter(between(shapiro_pval, 1e-8, 1e-5), abs_sum > 75) %>%
+        arrange(desc(abs_sum))
     } else if (input$lipid_subset == "controls") {
       rv$feature_data <- feature_data %>% filter(mz_rt %in% spike_in_controls)
     }

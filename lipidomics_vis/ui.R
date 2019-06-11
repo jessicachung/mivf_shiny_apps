@@ -31,6 +31,7 @@ shinyUI(fluidPage(
                   choices = list("All lipids (can be slow!)" = "all",
                                  "Random 100" = "random_100",
                                  "Random 1000" = "random_1000",
+                                 "Bimodal candidates" = "bimodal_candidates",
                                  "Spike-in controls" = "controls"),
                   selected = "random_100"),
       
