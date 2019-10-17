@@ -5,7 +5,8 @@ library(DT)
 shinyUI(fluidPage(
   
   # Application title
-  titlePanel("MIVF RNA-Seq and Microarray DGE"),
+  titlePanel("Endometrial RNA-Seq and Microarray DGE"),
+  h4("Peter Rogers"),
   
   fluidRow(
     column(3, wellPanel(

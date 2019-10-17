@@ -10,33 +10,13 @@ library(sva)
 ## RNA-Seq Data
 
 # Load data
-phenotype_all <- readRDS("../../mivf_rna_seq/data/tidy_data/sample_info.rds")
+rna_phenotype <- readRDS("../../mivf_rna_seq/data/tidy_data/combat_phenotype.rds")
+rna_bc <- readRDS("../../mivf_rna_seq/data/tidy_data/batch_normalised_exprs.rds")
+rna_cc <- readRDS("../../mivf_rna_seq/data/tidy_data/cycle_normalised_exprs.rds")
 qld_counts_list <- readRDS("../../mivf_rna_seq/data/tidy_data/qld_counts_list.rds")
 
-# Get samples
-phenotype <- phenotype_all %>% 
-  filter(! str_detect(sample_id, "_2$")) %>%
-  filter(cycle_stage %in% 1:7)
-
-# Get gene info
-gene_info <- qld_counts_list$gene_info
-
-# Filter counts (liberally)
-y <- qld_counts_list$counts[,phenotype$sample_id]
-y <- y[rowMeans(cpm(y) > 0.5) > 0.2,]
-dim(y)
-
-# Remove batch and cycle effects
-y <- DGEList(counts=y)
-y <- calcNormFactors(y, method="TMM")
-v <- voom(y)
-cycle <- factor(phenotype$cycle_stage)
-batch <- factor(phenotype$flowcell_batch)
-mod <- model.matrix(~cycle)
-rna_bc <- ComBat(dat=v$E, batch=batch, mod=mod)
-rna_cc <- ComBat(dat=rna_bc, batch=cycle, mod=NULL)
-rna_phenotype <- phenotype
-rna_gene_info <- gene_info
+rna_gene_info <- qld_counts_list$gene_info %>%
+  filter(ensembl_id %in% rownames(rna_bc))
 
 ############################################################
 ## Microarray data
@@ -48,9 +28,24 @@ array_bc <- readRDS("../../mivf_microarray/data/array_data/combined_combat_exprs
 array_cc <- readRDS("../../mivf_microarray/data/array_data/day_normalised_exprs.rds")
 pvals <- readRDS("../../mivf_microarray/data/array_data/combined_detection_pvals.rds")
 
-# Filter probes with poor detection p-values (liberally)
-ok <- rownames(pvals)[rowMeans(pvals < 0.05) > 0.2]
+# Filter probes with poor detection p-values (liberally) and poor annotation quality
+stopifnot(rownames(pvals) == probe_info$IlluminaID)
+probe_info <- probe_info %>% 
+  mutate(p_detected=rowMeans(pvals < 0.05),
+         pass_quality=str_detect(ProbeQuality, "Perfect|Good"),
+         pass_detect=p_detected > 0.2)
+
+# Manually add genes of interest
+probe_info <- probe_info %>%
+  mutate(special=SymbolReannotated == "CAMK4")
+
+# Get probes
+ok <- probe_info %>%
+  filter(special | (pass_quality & pass_detect)) %>%
+  pull(IlluminaID)
 # length(ok)
+
+# Get data
 array_bc <- array_bc[ok,]
 array_cc <- array_cc[ok,]
 
@@ -58,10 +53,11 @@ array_cc <- array_cc[ok,]
 array_phenotype <- phenotype %>% 
   select(sample_id, model_day, batch, study, day_of_cycle)
 array_probe_info <- probe_info %>%
-  select(IlluminaID, SymbolReannotated, EntrezReannotated) %>%
+  select(IlluminaID, EntrezReannotated, SymbolReannotated) %>%
   rename(illumina_id="IlluminaID",
          entrez="EntrezReannotated",
-         symbol="SymbolReannotated")
+         symbol="SymbolReannotated") %>%
+  filter(illumina_id %in% rownames(array_bc))
 
 # Not sure if some of the replicate samples should be removed, but for now
 # keep them
@@ -74,5 +70,6 @@ array_probe_info <- probe_info %>%
 # Save data
 save(rna_phenotype, rna_gene_info, rna_bc, rna_cc, 
      array_phenotype, array_probe_info, array_bc, array_cc,
+     version=2,
      file="data/data.RData")
 

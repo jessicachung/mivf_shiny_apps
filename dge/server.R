@@ -8,8 +8,6 @@ library(reshape2)
 library(plotly)
 
 # TODO: interactive plots and text
-# TODO: normalise RNA-seq data better
-# TODO: rearrange gene columns (symbol and entrez) order
 # 
 # Lots of repeated code... should refactor sometime
 
@@ -23,9 +21,10 @@ library(plotly)
 
 load("data/data.RData")
 original_rna_phenotype <- rna_phenotype %>% 
-  select(sample_id, study:afs_score) #%>%
+  select(sample_id, model_stage, cycle_stage, study, age:afs_score) #%>%
   # filter(! is.na(age))
-original_array_phenotype <- array_phenotype
+original_array_phenotype <- array_phenotype %>%
+  select(sample_id, model_day, day_of_cycle, study, batch)
 
 ############################################################
 ## Functions
@@ -259,7 +258,7 @@ shinyServer(function(input, output) {
       return()
     }
     ggplot(rv$rna_plot_list$cycle_dat, 
-             aes_string(x="cycle_stage", y="exprs", 
+             aes_string(x="model_stage", y="exprs", 
                         color=colnames(rv$rna_phenotype)[2])) +
       geom_jitter(height=0, width=0.3, size=2) +
       labs(title=paste(rv$rna_plot_list$gene, " - ", rv$rna_plot_list$gene_name)) + 
@@ -273,7 +272,7 @@ shinyServer(function(input, output) {
     }
     print(head(rv$rna_results$top_table))
     ggplot(rv$rna_results$top_table, aes(x=P.Value)) +
-      geom_histogram(binwidth=0.05, fill="white", color="black") +
+      geom_histogram(binwidth=0.05, boundary=0, fill="white", color="black") +
       labs(title="P-value histogram") + 
       theme_bw()
   })
@@ -414,7 +413,7 @@ shinyServer(function(input, output) {
     }
     print(head(rv$array_results$top_table))
     ggplot(rv$array_results$top_table, aes(x=P.Value)) +
-      geom_histogram(binwidth=0.05, fill="white", color="black") +
+      geom_histogram(binwidth=0.05, boundary=0, fill="white", color="black") +
       labs(title="P-value histogram") + 
       theme_bw()
   })
