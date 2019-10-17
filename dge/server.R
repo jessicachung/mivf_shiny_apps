@@ -260,7 +260,7 @@ shinyServer(function(input, output) {
     ggplot(rv$rna_plot_list$cycle_dat, 
              aes_string(x="model_stage", y="exprs", 
                         color=colnames(rv$rna_phenotype)[2])) +
-      geom_jitter(height=0, width=0.3, size=2) +
+      geom_point(size=2) +
       labs(title=paste(rv$rna_plot_list$gene, " - ", rv$rna_plot_list$gene_name)) + 
       theme_bw()
   })
@@ -401,7 +401,7 @@ shinyServer(function(input, output) {
     ggplot(rv$array_plot_list$cycle_dat, 
            aes_string(x="model_day", y="exprs", 
                       color=colnames(rv$array_phenotype)[2])) +
-      geom_jitter(height=0, width=0.3, size=2) +
+      geom_point(size=2) +
       labs(title=paste(rv$array_plot_list$gene, " - ", rv$array_plot_list$gene_name)) + 
       theme_bw()
   })
