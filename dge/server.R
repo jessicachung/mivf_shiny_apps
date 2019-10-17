@@ -137,7 +137,8 @@ cycle_plot <- function(plot_list, phenotype, x="model_stage", plot_type="ggplot"
   }
   ggplot(plot_list$cycle_dat, 
          aes_string(x=x, y="exprs", 
-                    color=colnames(phenotype)[2])) +
+                    color=colnames(phenotype)[2],
+                    text="sample_id")) +
     geom_point(size=size) +
     labs(title=paste(plot_list$gene, " - ", plot_list$gene_name)) + 
     theme_bw()
@@ -356,7 +357,7 @@ shinyServer(function(input, output) {
   ############################################################
   
   # Perform DGE analysis and get top table
-  observeEvent({rv$filtered_rna_phenotype}, {
+  observeEvent({rv$filtered_array_phenotype}, {
     message("Performing microarray DGE analysis...")
     top_table <- perform_dge(exprs=array_cc, pheno=rv$filtered_array_phenotype,
                              gene_info=array_probe_info, gene_column="illumina_id")
