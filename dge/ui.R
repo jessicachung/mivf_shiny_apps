@@ -11,7 +11,7 @@ shinyUI(fluidPage(
   fluidRow(
     column(3, wellPanel(
       
-      h4(em("Sample upload:")),
+      h4(em("Upload sample groups:")),
       
       fileInput("file1", "Choose CSV file:",
                 multiple = FALSE,
@@ -54,25 +54,25 @@ shinyUI(fluidPage(
         condition="input.study_select == 'checkbox'",
         wellPanel(
           checkboxGroupInput("study_checkbox",
-                             label = "Included study samples (WIP)",
+                             label = "Included study samples",
                              choices = list("Study 1" = "study_1",
                                             "Study 2" = "study_2",
-                                            "HMB" = "hmb"),
-                             selected = c("study_1", "study_2", "hmb"))
+                                            "HMB" = "HMB"),
+                             selected = c("study_1", "study_2", "HMB"))
         )
       ),
       
-      selectInput("filter_select",
-                  label = "Filter counts (WIP):",
-                  choices = list("Normal" = "normal",
-                                 "Lenient" = "lenient"),
-                  selected = "normal"),
+      # selectInput("filter_select",
+      #             label = "Filter counts (WIP):",
+      #             choices = list("Normal" = "normal",
+      #                            "Lenient" = "lenient"),
+      #             selected = "normal"),
       
       br(),
       
       h4(em("Display options:")),
       selectInput("plot_type",
-                  label = "Plot type (WIP):",
+                  label = "Plot type:",
                   choices = list("Static" = "ggplot",
                                  "Interactive" = "plotly"),
                   selected = "ggplot"),
@@ -161,15 +161,15 @@ shinyUI(fluidPage(
           ),
           
           tabPanel("...", br(), h4("Notes:"),
-                   p("This app is still under development"),
+                   p("This app is still under development. Some of the options on the left panel don't work yet."),
                    p("The uploaded CSV file should have two columns. The first column should be sample ID and the second column is group name. There should be two groups only for A vs B analysis, or a numerical column for linear analysis."),
                    p("DGE analysis will not run if fewer than three samples per gorup."),
                    p("Currently, the DGE model doesn't include age. #TODO: add option to include age in model."),
                    p("'Expression plot' plots the expression of cycle-corrected data for the highlighted genes for the defined groups."),
                    p("'Cycle stage plot' plots the batch-corrected data across cycle stage."),
-                   p("Currently the RNA data is normalised by 7-stage cycle from histology and the microarray data is normalised by 28-day cycle predicted from the molecular data. #TODO: normalise RNA using predicted day."),
+                   p("Currently the RNA data is normalised by 7-stage cycle predicted from the molecular data and the microarray data is normalised by 28-day cycle predicted from the molecular data."),
                    p("Filtering is lenient at the moment. Currently not filtering genes based on which samples are included in analysis. The current method is CPM > 0.5 for at least 20% of all samples in RNA-seq, and detection p-value < 0.05 in at least 20% of all samples in microarray."),
-                   p("Most of the options on the left panel don't work yet."))
+                   p(""))
         )
       )
       
