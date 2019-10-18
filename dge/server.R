@@ -12,6 +12,31 @@ library(plotly)
 ############################################################
 
 load("data/data.RData")
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# Quick fix to change URS samples in array data to match RNA names
+# Move this code to get_data.R in the future.
+
+# array_phenotype %>% filter(study == "study_2") %>% View
+# rna_phenotype %>% filter(study == "study_2") %>% View
+names_to_change <- array_phenotype %>% filter(study == "study_2") %>% .$sample_id
+tmp <- str_match(names_to_change, "^X([0-9]+)(_?\\w)?$")
+tmp[,2] <- sprintf("%03d", as.numeric(tmp[,2]))
+tmp[,3][is.na(tmp[,3])] <- ""
+new_names <- paste0("URS", tmp[,2], tmp[,3])
+new_name_lookup <- new_names
+names(new_name_lookup) <- names_to_change
+
+stopifnot(colnames(array_bc) == array_phenotype$sample_id)
+stopifnot(colnames(array_cc) == array_phenotype$sample_id)
+
+array_phenotype <- array_phenotype %>%
+  mutate(sample_id=ifelse(study == "study_2", 
+                          new_name_lookup[sample_id], sample_id))
+colnames(array_bc) <- array_phenotype$sample_id
+colnames(array_cc) <- array_phenotype$sample_id
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
 original_rna_phenotype <- rna_phenotype %>% 
   select(sample_id, model_stage, cycle_stage, study, sequencing_batch) %>%
   rename(batch="sequencing_batch")
