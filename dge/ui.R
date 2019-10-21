@@ -167,9 +167,9 @@ shinyUI(fluidPage(
                    p("Currently, the DGE model doesn't include age. #TODO: add option to include age in model."),
                    p("'Expression plot' plots the expression of cycle-corrected data for the highlighted genes for the defined groups."),
                    p("'Cycle stage plot' plots the batch-corrected data across cycle stage."),
-                   p("Currently the RNA data is normalised by 7-stage cycle predicted from the molecular data and the microarray data is normalised by 28-day cycle predicted from the molecular data."),
-                   p("Filtering is lenient at the moment. Currently not filtering genes based on which samples are included in analysis. The current method is CPM > 0.5 for at least 20% of all samples in RNA-seq, and detection p-value < 0.05 in at least 20% of all samples in microarray."),
-                   p("The study 2 (URS) samples are named differently between the RNA and microarray data (e.g. sample 'URS001' in the RNA data is 'X1' in the microarray data."))
+                   p("Currently the RNA data is normalised by 7-stage cycle predicted from the molecular data and the microarray data is normalised by 28-day cycle predicted from the molecular data. The process is briefly described", a("here", href="docs/cycle_stage_normalisation.pdf")),
+                   p("Filtering is lenient at the moment. Currently not filtering genes based on which samples are included in analysis. The current method is CPM > 0.5 for at least 20% of all samples in RNA-seq, and detection p-value < 0.05 in at least 20% of all samples in microarray.")
+                   )
         )
       )
       
