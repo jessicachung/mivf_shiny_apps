@@ -31,7 +31,7 @@ rna_phenotype <- rna_phenotype %>%
 # array_phenotype <- readRDS("../../mivf_microarray/data/phenotype_data/combat_phenotype.rds")
 array_phenotype <- readRDS("../../endo_molecular_model/data/tidy_data/array_combat_phenotype_2020-12-02.rds")
 probe_info <- readRDS("../../mivf_endometriosis/data/array_data/illumina_v4_annotation.rds")
-array_bc <- readRDS("../../endo_molecular_model/data/array_data/combat_exprs.rds")
+array_bc <- readRDS("../../endo_molecular_model/data/array_data/combined_combat_exprs_corrected.rds")
 array_cc <- readRDS("../../endo_molecular_model/data/tidy_data/array_cycle_normalised_exprs_2020-12-02_k30_g4.rds")
 pvals <- readRDS("../../mivf_endometriosis/data/array_data/combined_pval.rds")
 

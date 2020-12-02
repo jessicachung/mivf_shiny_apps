@@ -183,14 +183,35 @@ shinyServer(function(input, output) {
   ## PANEL 1
   ############################################################
   
-  observeEvent({input$file1}, {
-    message("CSV file uploaded")
+  observeEvent({input$file1; input$csv_select}, {
     tryCatch(
       {
-        df <- read.csv(input$file1$datapath,
-                       header=FALSE,
-                       sep=",",
-                       stringsAsFactors=FALSE)
+        if (input$csv_select == "age") {
+          df <- rbind(
+            original_rna_phenotype %>% select(sample_id, age),
+            original_array_phenotype %>% select(sample_id, age)
+          ) %>%
+            filter(! is.na(age)) %>%
+            mutate(age=as.numeric(age)) %>%
+            .[! duplicated(.),]
+        } else if (input$csv_select == "endo") {
+          df <- rbind(
+            original_rna_phenotype %>% select(sample_id, endo),
+            original_array_phenotype %>% select(sample_id, endo)
+          ) %>%
+            filter(! is.na(endo)) %>%
+            .[! duplicated(.),]
+        } else {
+          if (! is.null(input$file1$datapath)) {
+            df <- read.csv(input$file1$datapath,
+                           header=FALSE,
+                           sep=",",
+                           stringsAsFactors=FALSE)
+            message("CSV file uploaded")
+          } else {
+            return(0)
+          }
+        }
         colnames(df) <- c("sample_id", "group")
         if (is.numeric(df$group) & length(unique(df$group)) > 2) {
           message("Detected numerical covariate")

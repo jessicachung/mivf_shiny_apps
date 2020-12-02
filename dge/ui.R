@@ -13,11 +13,20 @@ shinyUI(fluidPage(
       
       h4(em("Upload sample groups:")),
       
-      fileInput("file1", "Choose CSV file:",
-                multiple = FALSE,
-                accept = c("text/csv",
-                           "text/comma-separated-values,text/plain",
-                           ".csv")),
+      selectInput("csv_select",
+                  label = "Choose CSV file:",
+                  choices = list("Age" = "age",
+                                 "Endometriosis" = "endo",
+                                 "Upload custom CSV file" = "upload"),
+                  selected = "upload"),
+      conditionalPanel(
+        condition="input.csv_select == 'upload'",
+        fileInput("file1", "Choose CSV file:",
+                  multiple = FALSE,
+                  accept = c("text/csv",
+                             "text/comma-separated-values,text/plain",
+                             ".csv"))
+      ),
 
       h4(em("Analysis options:")),
       
@@ -167,7 +176,7 @@ shinyUI(fluidPage(
                    p("Currently, the DGE model doesn't include age. #TODO: add option to include age in model."),
                    p("'Expression plot' plots the expression of cycle-corrected data for the highlighted genes for the defined groups."),
                    p("'Cycle stage plot' plots the batch-corrected data across cycle stage."),
-                   p("Currently the RNA data is normalised by 7-stage cycle predicted from the molecular data and the microarray data is normalised by 28-day cycle predicted from the molecular data. The process is briefly described", a("here", href="cycle_stage_normalisation.pdf")),
+                   p("Currently the RNA data is normalised by 7-stage cycle predicted from the molecular data and the microarray data is normalised by 28-day cycle predicted from the molecular data. The process is briefly described", a("here", href="cycle_stage_normalisation.pdf", target="_blank")),
                    p("Filtering is lenient at the moment. Currently not filtering genes based on which samples are included in analysis. The current method is CPM > 0.5 for at least 20% of all samples in RNA-seq, and detection p-value < 0.05 in at least 20% of all samples in microarray.")
                    )
         )
