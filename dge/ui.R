@@ -136,6 +136,15 @@ shinyUI(fluidPage(
                                 condition="input.plot_type == 'plotly'",
                                 plotlyOutput("plotly_rna_cycle", height="500px"))
                               ),
+                     tabPanel("Cycle-corrected plot", br(),
+                              conditionalPanel(
+                                condition="input.plot_type == 'ggplot'",
+                                plotOutput("ggplot_rna_corrected", height="500px")),
+                              
+                              conditionalPanel(
+                                condition="input.plot_type == 'plotly'",
+                                plotlyOutput("plotly_rna_corrected", height="500px"))
+                     ),
                      tabPanel("P-value histogram", br(),
                               plotOutput("ggplot_rna_pval", height="500px"))
                    )
@@ -163,6 +172,15 @@ shinyUI(fluidPage(
                               conditionalPanel(
                                 condition="input.plot_type == 'plotly'",
                                 plotlyOutput("plotly_array_cycle", height="500px"))
+                     ),
+                     tabPanel("Cycle-corrected plot", br(),
+                              conditionalPanel(
+                                condition="input.plot_type == 'ggplot'",
+                                plotOutput("ggplot_array_corrected", height="500px")),
+                              
+                              conditionalPanel(
+                                condition="input.plot_type == 'plotly'",
+                                plotlyOutput("plotly_array_corrected", height="500px"))
                      ),
                      tabPanel("P-value histogram", br(),
                               plotOutput("ggplot_array_pval", height="500px"))

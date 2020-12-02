@@ -80,7 +80,8 @@ get_plot_data <- function(gene_id, gene_info, bc_exprs, cc_exprs, phenotype) {
   
   # Get expression for non-cycle-corrected data
   cycle_dat <- phenotype %>%
-    mutate(exprs=bc_exprs[gene_id,sample_id]) %>%
+    mutate(exprs=bc_exprs[gene_id,sample_id],
+           cc_exprs=cc_exprs[gene_id,sample_id]) %>%
     merge(phenotype %>% select(1,2), all=TRUE)
   
   return(list(dat=dat, cycle_dat=cycle_dat, 
@@ -127,7 +128,8 @@ expression_plot <- function(plot_list, phenotype, plot_type="ggplot") {
   return(g)
 }
 
-cycle_plot <- function(plot_list, phenotype, x="model_time", plot_type="ggplot") {
+cycle_plot <- function(plot_list, phenotype, x="model_time", y="exprs",
+                       plot_type="ggplot") {
   if (plot_type == "ggplot") {
     size <- 2
   } else {
@@ -138,7 +140,7 @@ cycle_plot <- function(plot_list, phenotype, x="model_time", plot_type="ggplot")
     return()
   }
   ggplot(plot_list$cycle_dat, 
-         aes_string(x=x, y="exprs", 
+         aes_string(x=x, y=y, 
                     color=colnames(phenotype)[2],
                     text="sample_id")) +
     geom_point(size=size) +
@@ -369,6 +371,16 @@ shinyServer(function(input, output) {
                x="model_time", plot_type="plotly")
   })
   
+  # Plot cycle-corrected expression
+  output$ggplot_rna_corrected <- renderPlot({
+    cycle_plot(plot_list=rv$rna_plot_list, phenotype=rv$filtered_rna_phenotype,
+               x="model_time", y="cc_exprs", plot_type="ggplot")
+  })
+  
+  output$plotly_rna_corrected <- renderPlotly({
+    cycle_plot(plot_list=rv$rna_plot_list, phenotype=rv$filtered_rna_phenotype,
+               x="model_time", y="cc_exprs", plot_type="plotly")
+  })
   
   # Plot P-value histogram
   output$ggplot_rna_pval <- renderPlot({
@@ -442,6 +454,18 @@ shinyServer(function(input, output) {
     cycle_plot(plot_list=rv$array_plot_list, phenotype=rv$filtered_array_phenotype,
                x="model_time", plot_type="plotly")
   })
+  
+  # Plot cycle-corrected expression
+  output$ggplot_array_corrected <- renderPlot({
+    cycle_plot(plot_list=rv$array_plot_list, phenotype=rv$filtered_array_phenotype,
+               x="model_time", y="cc_exprs", plot_type="ggplot")
+  })
+  
+  output$plotly_array_corrected <- renderPlotly({
+    cycle_plot(plot_list=rv$array_plot_list, phenotype=rv$filtered_array_phenotype,
+               x="model_time", y="cc_exprs", plot_type="plotly")
+  })
+  
   
   # Plot P-value histogram
   output$ggplot_array_pval <- renderPlot({
