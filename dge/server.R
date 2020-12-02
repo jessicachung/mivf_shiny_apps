@@ -13,36 +13,13 @@ library(plotly)
 
 load("data/data.RData")
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# Quick fix to change URS samples in array data to match RNA names
-# Move this code to get_data.R in the future.
-
-# array_phenotype %>% filter(study == "study_2") %>% View
-# rna_phenotype %>% filter(study == "study_2") %>% View
-names_to_change <- array_phenotype %>% filter(study == "study_2") %>% .$sample_id
-tmp <- str_match(names_to_change, "^X([0-9]+)(_?\\w)?$")
-tmp[,2] <- sprintf("%03d", as.numeric(tmp[,2]))
-tmp[,3][is.na(tmp[,3])] <- ""
-new_names <- paste0("URS", tmp[,2], tmp[,3])
-new_name_lookup <- new_names
-names(new_name_lookup) <- names_to_change
-
 stopifnot(colnames(array_bc) == array_phenotype$sample_id)
 stopifnot(colnames(array_cc) == array_phenotype$sample_id)
 
-array_phenotype <- array_phenotype %>%
-  mutate(sample_id=ifelse(study == "study_2", 
-                          new_name_lookup[sample_id], sample_id))
-colnames(array_bc) <- array_phenotype$sample_id
-colnames(array_cc) <- array_phenotype$sample_id
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
 original_rna_phenotype <- rna_phenotype %>% 
-  select(sample_id, model_stage, cycle_stage, study, sequencing_batch) %>%
-  rename(batch="sequencing_batch")
-  # filter(! is.na(age))
-original_array_phenotype <- array_phenotype %>%
-  select(sample_id, model_day, day_of_cycle, study, batch)
+  mutate(model_time=round(model_time, 2))
+original_array_phenotype <- array_phenotype %>% 
+  mutate(model_time=round(model_time, 2))
 
 ############################################################
 ## Functions
@@ -150,7 +127,7 @@ expression_plot <- function(plot_list, phenotype, plot_type="ggplot") {
   return(g)
 }
 
-cycle_plot <- function(plot_list, phenotype, x="model_stage", plot_type="ggplot") {
+cycle_plot <- function(plot_list, phenotype, x="model_time", plot_type="ggplot") {
   if (plot_type == "ggplot") {
     size <- 2
   } else {
@@ -363,12 +340,12 @@ shinyServer(function(input, output) {
   # Plot cycle expression
   output$ggplot_rna_cycle <- renderPlot({
     cycle_plot(plot_list=rv$rna_plot_list, phenotype=rv$filtered_rna_phenotype,
-               x="model_stage", plot_type="ggplot")
+               x="model_time", plot_type="ggplot")
   })
   
   output$plotly_rna_cycle <- renderPlotly({
     cycle_plot(plot_list=rv$rna_plot_list, phenotype=rv$filtered_rna_phenotype,
-               x="model_stage", plot_type="plotly")
+               x="model_time", plot_type="plotly")
   })
   
   
@@ -437,12 +414,12 @@ shinyServer(function(input, output) {
   # Plot cycle expression
   output$ggplot_array_cycle <- renderPlot({
     cycle_plot(plot_list=rv$array_plot_list, phenotype=rv$filtered_array_phenotype,
-               x="model_day", plot_type="ggplot")
+               x="model_time", plot_type="ggplot")
   })
   
   output$plotly_array_cycle <- renderPlotly({
     cycle_plot(plot_list=rv$array_plot_list, phenotype=rv$filtered_array_phenotype,
-               x="model_day", plot_type="plotly")
+               x="model_time", plot_type="plotly")
   })
   
   # Plot P-value histogram
